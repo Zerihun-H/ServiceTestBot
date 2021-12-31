@@ -5,6 +5,7 @@ import (
 	"log"
 	"os/exec"
 	"sync"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -69,9 +70,9 @@ func main() {
 
 	service.New(bot, updates)
 
-	// service.Start()
-	// bot.LogOut()
-	// time.Sleep(10 * time.Minute)
+	 service.Start()
+	bot.LogOut()
+	time.Sleep(10 * time.Minute)
 	service.UpdateUrSelf()
 
 }
