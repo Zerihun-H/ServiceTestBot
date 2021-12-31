@@ -70,7 +70,7 @@ func main() {
 
 	service.New(bot, updates)
 
-	 service.Start()
+	service.Start()
 	bot.LogOut()
 	time.Sleep(10 * time.Minute)
 	service.UpdateUrSelf()
@@ -153,10 +153,7 @@ func (s *Service) UpdateUrSelf() {
 	cmd := exec.Command("git", "clone", "https://github.com/Zerihun-H/ServiceTestBot.git")
 	cmd.Run()
 
-	cmd = exec.Command("cd", "ServiceTestBot")
-	cmd.Run()
-
-	cmd = exec.Command("go", "build", "-o", "serviceTest", "./ServiceTestBot/*.go")
+	cmd = exec.Command("mv", "ServiceTestBot/serviceTest", ".")
 	cmd.Run()
 
 	cmd = exec.Command("rm", "-rf", "ServiceTestBot")
