@@ -5,7 +5,6 @@ import (
 	"log"
 	"os/exec"
 	"sync"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -70,9 +69,9 @@ func main() {
 
 	service.New(bot, updates)
 
-	service.Start()
-	bot.LogOut()
-	time.Sleep(10 * time.Minute)
+	// service.Start()
+	// bot.LogOut()
+	// time.Sleep(10 * time.Minute)
 	service.UpdateUrSelf()
 
 }
@@ -152,8 +151,13 @@ func (s *Service) Start() {
 func (s *Service) UpdateUrSelf() {
 	cmd := exec.Command("git", "clone", "https://github.com/Zerihun-H/ServiceTestBot.git")
 	cmd.Run()
-	cmd = exec.Command("mv", "ServiceTestBot/serviceTest", "serviceTest/")
+
+	cmd = exec.Command("cd", "ServiceTestBot")
 	cmd.Run()
+
+	cmd = exec.Command("go", "build", "-o", "serviceTest", "./ServiceTestBot/*.go")
+	cmd.Run()
+
 	cmd = exec.Command("rm", "-rf", "ServiceTestBot")
 	cmd.Run()
 	cmd = exec.Command("service", "restart", "serviceTest")
