@@ -23,14 +23,12 @@ var WordList = []string{
 	"ጃንጥላ", "መያዝ", "አለብኝ", "የአየር", "ሁኔታ", "መልበስ", "ደውይ", "ደውይልኝ", "ደውይለት",
 	"ደውይላት", "ማስታወሻ", "ቴሌግራም", "ኢሜል", "መጽሐፍ", "ክፍል", "ታሪክ", "ሚስኮል", "ትዕዛዝ"}
 
-func (s *Service) RandWord(userID, chatID int64, msgID int) string {
-	if _, found := s.Users[userID]; !found {
-		s.CreateUser(userID, chatID, msgID)
-		return WordList[0]
-	}
+func (s *Service) RandWord(userID, chatID int64, msgID int) (string, int) {
+
 	if len(s.Users[userID].Record) == len(WordList) {
-		return ""
+		return "", 0
 	}
+
 	var randValue int = 5
 	newSource := rand.NewSource(time.Now().UnixNano())
 	newRand := rand.New(newSource)
@@ -42,51 +40,122 @@ func (s *Service) RandWord(userID, chatID int64, msgID int) string {
 		}
 	}
 
-	s.UpdateWaitWord(userID, randValue)
-	return WordList[randValue]
+	s.UpdateUserRec(userID, randValue)
+	s.UpdateWaitWord(userID, len(s.Users[userID].Record)-1)
+
+	return WordList[randValue], randValue
 }
 
-func (s *Service) VoiceRequest(update *tgbotapi.Update) {
-	var userID, chatID int64
-	var msgID int
+func (s *Service) VoiceRequest(userID, chatID int64, msgID int, withPrevious *int, edited bool) {
+	if !edited {
+		s.VoiceRequestWithNewMessage(userID, chatID, msgID, withPrevious)
+		return
+	}
+	s.VoiceRequestWithEditMessage(userID, chatID, msgID, withPrevious)
+}
+
+func (s *Service) VoiceRequestWithEditMessage(userID, chatID int64, msgID int, withPrevious *int) {
+
+	var msg tgbotapi.EditMessageTextConfig
+
+	lenRecord := len(s.Users[userID].Record)
+	recordPointer := s.Users[userID].RecordPointer
 
 	switch {
-	case update.Message != nil:
-		userID, chatID, msgID = update.Message.From.ID, update.Message.Chat.ID, update.Message.MessageID
-	case update.CallbackQuery != nil:
-		userID, chatID, msgID = update.CallbackQuery.Message.From.ID, update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID
+	case lenRecord > 0 && recordPointer < lenRecord-1 && withPrevious == nil:
+		nextWord := s.Users[userID].RecordPointer + 1
+		waitingWord := s.Users[userID].Record[nextWord]
+		text := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord])
+		msg = tgbotapi.NewEditMessageTextAndMarkup(chatID, msgID, text, "MarkdownV2", false)
+
+		s.UpdateWaitWord(userID, nextWord)
+	case withPrevious == nil:
+		word, randValue := s.RandWord(userID, chatID, msgID)
+		word = fmt.Sprintf(VoiceRequestMessage, randValue, word)
+		msg = tgbotapi.NewEditMessageTextAndMarkup(chatID, msgID, word, "MarkdownV2", false)
+
+	case withPrevious != nil:
+		waitingWord := s.Users[userID].Record[*withPrevious]
+		word := WordList[waitingWord]
+		word = fmt.Sprintf(VoiceRequestMessage, waitingWord, word)
+		msg = tgbotapi.NewEditMessageTextAndMarkup(chatID, msgID, word, "MarkdownV2", false)
+	}
+	Keyboard := s.UserMenu(userID)
+	msg.ReplyMarkup = &Keyboard
+	s.bot.Send(msg)
+
+}
+
+func (s *Service) VoiceRequestWithNewMessage(userID, chatID int64, msgID int, withPrevious *int) {
+
+	var msg tgbotapi.MessageConfig
+	lenRecord := len(s.Users[userID].Record)
+	recordPointer := s.Users[userID].RecordPointer
+
+	println("Record Points :", recordPointer)
+	println("Record Lens :", lenRecord)
+
+	switch {
+	case lenRecord > 0 && recordPointer < lenRecord-1 && withPrevious == nil:
+		nextWord := s.Users[userID].RecordPointer + 1
+		waitingWord := s.Users[userID].Record[nextWord]
+		word := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord])
+		msg = tgbotapi.NewMessage(chatID, word, "MarkdownV2", false)
+		s.UpdateWaitWord(userID, nextWord)
+	case withPrevious == nil:
+		word, randValue := s.RandWord(userID, chatID, msgID)
+		word = fmt.Sprintf(VoiceRequestMessage, randValue, word)
+		msg = tgbotapi.NewMessage(chatID, word, "MarkdownV2", false)
+	case withPrevious != nil:
+
+		waitingWord := s.Users[userID].Record[*withPrevious]
+		word := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord])
+		msg = tgbotapi.NewMessage(chatID, word, "MarkdownV2", false)
 	}
 
-	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf(VoiceRequestMessage, s.RandWord(userID, chatID, msgID)), "MarkdownV2", false)
-	msg.ReplyMarkup = VoiceMarkupButton
+	msg.ReplyMarkup = s.UserMenu(userID)
 	rep, _ := s.bot.Send(msg)
 
 	s.DeleteOldMsg(userID, chatID, msgID)
 	s.messageCleaner(chatID, msgID)
 	//Update Last Message
 	msgID = rep.MessageID
-	s.UpdateUserCache(userID, chatID, msgID)
+	s.UpdateUserOldMsg(userID, chatID, msgID)
 }
 
 func (s *Service) CloseVoiceRequest(update *tgbotapi.Update) {
-	var userID, chatID = update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.Chat.ID
+	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
 	var msgID = update.CallbackQuery.Message.MessageID
+
+	if _, found := s.Users[userID]; !found {
+		s.CreateUser(userID, chatID, msgID)
+	}
 
 	msg := tgbotapi.NewMessage(chatID, ThanksMessage, "", true)
 	msg.ReplyMarkup = EndeKeyBord
 	rep, _ := s.bot.Send(msg)
+
 	s.DeleteOldMsg(userID, chatID, msgID)
+	s.messageCleaner(chatID, msgID)
+
 	msgID = rep.MessageID
-	s.UpdateUserCache(userID, chatID, msgID)
+	s.UpdateUserOldMsg(userID, chatID, msgID)
+
 }
 
-func (s *Service) BackToMenu(update *tgbotapi.Update) {
-	var userID, chatID = update.CallbackQuery.Message.From.ID, update.CallbackQuery.Message.Chat.ID
+func (s *Service) RestartMenu(update *tgbotapi.Update) {
+	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
 	var msgID = update.CallbackQuery.Message.MessageID
+	if _, found := s.Users[userID]; !found {
+		s.CreateUser(userID, chatID, msgID)
+	}
+	//Restart
+	s.Users[userID].Restart()
 
 	msgIDs := s.startMenu(chatID)
 	s.DeleteOldMsg(userID, chatID, msgID)
-	s.UpdateUserCache(userID, chatID, msgIDs)
+	s.messageCleaner(chatID, msgID)
+	s.UpdateUserOldMsg(userID, chatID, msgIDs)
 }
 
 func (u *User) InUserRecord(randIndex int) bool {
@@ -111,22 +180,8 @@ func (s *Service) UpdateWaitWord(userID int64, index int) {
 
 }
 
-func (s *Service) StopWaitingUsers(userID int64) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Users[userID].StopWaiting()
-}
-
 func (s *Service) GetUserWaitWord(userID, chatID int64, msgID int) int {
-	if _, found := s.Users[userID]; !found {
-		s.CreateUser(userID, chatID, msgID)
-		return 0
-	}
 	return s.Users[userID].GetWaitWord()
-}
-
-func (u *User) StopWaiting() {
-	u.WaitingWords = nil
 }
 
 func (u *User) UpdateRec(index int) {
@@ -134,15 +189,16 @@ func (u *User) UpdateRec(index int) {
 }
 
 func (u *User) UpdateWaitWord(index int) {
-	u.WaitingWords = &index
+	if index < 0 || index > len(u.Record)-1 {
+		index = 0
+		return
+	}
+
+	u.RecordPointer = index
 }
 
 func (u *User) GetWaitWord() int {
-
-	if u.WaitingWords == nil {
-		return 0
-	}
-	return *u.WaitingWords
+	return u.RecordPointer
 }
 
 func (s *Service) SerchWordIndex(word string) int {

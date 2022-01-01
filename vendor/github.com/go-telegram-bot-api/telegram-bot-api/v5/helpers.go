@@ -57,11 +57,12 @@ func NewForward(chatID int64, fromChatID int64, messageID int) ForwardConfig {
 //
 // chatID is where to send it, fromChatID is the source chat,
 // and messageID is the ID of the original message.
-func NewCopyMessage(chatID int64, fromChatID int64, messageID int) CopyMessageConfig {
+func NewCopyMessage(chatID int64, caption string, fromChatID int64, messageID int) CopyMessageConfig {
 	return CopyMessageConfig{
 		BaseChat:   BaseChat{ChatID: chatID},
 		FromChatID: fromChatID,
 		MessageID:  messageID,
+		Caption:    caption,
 	}
 }
 
@@ -582,14 +583,15 @@ func NewEditMessageText(chatID int64, messageID int, text string) EditMessageTex
 }
 
 // NewEditMessageTextAndMarkup allows you to edit the text and replymarkup of a message.
-func NewEditMessageTextAndMarkup(chatID int64, messageID int, text string, replyMarkup InlineKeyboardMarkup) EditMessageTextConfig {
+func NewEditMessageTextAndMarkup(chatID int64, messageID int, text, parse string, preview bool) EditMessageTextConfig {
 	return EditMessageTextConfig{
 		BaseEdit: BaseEdit{
-			ChatID:      chatID,
-			MessageID:   messageID,
-			ReplyMarkup: &replyMarkup,
+			ChatID:    chatID,
+			MessageID: messageID,
 		},
-		Text: text,
+		Text:                  text,
+		ParseMode:             parse,
+		DisableWebPagePreview: preview,
 	}
 }
 

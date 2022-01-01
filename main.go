@@ -14,7 +14,7 @@ type Service struct {
 	*Cache
 	bot      *tgbotapi.BotAPI
 	updates  tgbotapi.UpdatesChannel
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	IOstatus bool
 	Repositry
 }
@@ -31,11 +31,16 @@ type Cache struct {
 }
 
 type User struct {
-	ChatID       int64
-	LastmsgID    int
-	Status       bool
-	Record       []int
-	WaitingWords *int
+	ChatID        int64
+	LastmsgID     int
+	Status        bool
+	Record        []int
+	RecordPointer int
+}
+
+func (u *User) Restart() {
+	u.Record = nil
+	u.RecordPointer = 0
 }
 
 type VoiceMessage struct {
@@ -55,7 +60,30 @@ func (s *Service) CreateUser(userID, chatID int64, msgID int) {
 	s.mu.Unlock()
 }
 
+// func main() {
+
+// 	f, err := os.Create("data.txt")
+
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+
+// 	defer f.Close()
+
+// 	for _, word := range WordList {
+
+// 		_, err := f.WriteString(word + "\n")
+
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+// 	}
+
+// 	fmt.Println("done")
+// }
+
 func main() {
+
 	var service Service
 	bot, err := tgbotapi.NewBotAPI("5005564686:AAGyPZX32onyXWCRGdkIq804LPmqBCgo3O0")
 	if err != nil {
@@ -107,27 +135,14 @@ func (u *User) UpdateMsg(msgID int) {
 	u.LastmsgID = msgID
 }
 
-func (s *Service) NotificationBuilder(usersID int) {
+func (s *Service) NotificationBuilder(usersID int) {}
 
-}
-
-func (s *Service) UpdateUserCache(userID, chatID int64, msgID int) {
-	if _, found := s.Users[userID]; found {
-		s.Users[userID].UpdateMsg(msgID)
-		return
-	}
-	var NewUser *User = &User{
-		Status: false,
-		ChatID: chatID,
-	}
-
-	s.Users[userID] = NewUser
-	s.Users[userID].LastmsgID = msgID
+func (s *Service) UpdateUserOldMsg(userID, chatID int64, msgID int) {
+	s.Users[userID].UpdateMsg(msgID)
 }
 
 func (s *Service) Start() {
 	for update := range s.updates {
-
 		switch {
 		case update.CallbackQuery != nil:
 			switch {
@@ -142,9 +157,7 @@ func (s *Service) Start() {
 			go s.ChosenInlineResultHandler(&update)
 		case update.Message != nil:
 			go s.MessageHandler(&update)
-
 		}
-
 	}
 
 }
@@ -176,6 +189,7 @@ func (s *Service) Home(update *tgbotapi.Update) {
 		return
 	}
 	s.RegisterUser(update)
+	PrettyPrint(s.Users[update.Message.From.ID])
 
 }
 

@@ -9,24 +9,60 @@ import (
 
 //Hnadler Trigger Callback from msg or inline
 func (s *Service) CallbackQueryHandler(update *tgbotapi.Update) {
-
 	switch update.CallbackQuery.Data {
-	case "0", "2":
-		go s.VoiceRequest(update)
-	case "1":
+	case "1", "-1":
+		go s.VoiceRequestHandler(update)
+	case "0":
 		go s.CloseVoiceRequest(update)
 	case "3":
-		go s.BackToMenu(update)
+		go s.RestartMenu(update)
+	case "-3":
+		go s.VoiceRequestHandler(update)
 	case "4":
 		go s.ConfirmDataSet(update)
-	case "5":
+	case "-4":
 		go s.RejectDataset(update)
 	case "6":
 		go s.BlockUser(update)
 	case "7":
 		go s.MoveBack(update)
-
+	case "-2":
+		go s.GoBack(update)
+	case "2":
+		go s.GoNext(update)
 	}
+
+}
+
+func (s *Service) GoNext(update *tgbotapi.Update) {
+	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
+	var msgID = update.CallbackQuery.Message.MessageID
+	if _, found := s.Users[userID]; !found {
+		s.CreateUser(userID, chatID, msgID)
+		s.VoiceRequest(userID, chatID, msgID, nil, false)
+		return
+	}
+	pointer := s.Users[userID].GetWaitWord() + 1
+	s.UpdateWaitWord(userID, pointer)
+	s.VoiceRequest(userID, chatID, msgID, &pointer, true)
+	PrettyPrint(s.Users[userID])
+}
+
+func (s *Service) GoBack(update *tgbotapi.Update) {
+	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
+	var msgID = update.CallbackQuery.Message.MessageID
+	if _, found := s.Users[userID]; !found {
+		s.CreateUser(userID, chatID, msgID)
+		s.VoiceRequest(userID, chatID, msgID, nil, false)
+		return
+	}
+
+	pointer := s.Users[userID].GetWaitWord() - 1
+	s.UpdateWaitWord(userID, pointer)
+
+	s.VoiceRequest(userID, chatID, msgID, &pointer, true)
+
+	PrettyPrint(s.Users[userID])
 
 }
 
@@ -38,7 +74,6 @@ func (s *Service) ChosenInlineResultHandler(update *tgbotapi.Update) {}
 
 //TextMessageTrigger
 func (s *Service) MessageHandler(update *tgbotapi.Update) {
-
 	switch {
 	case update.Message.Command() != "":
 		go s.CommandHandler(update)
@@ -46,17 +81,28 @@ func (s *Service) MessageHandler(update *tgbotapi.Update) {
 		go s.VoiceMessageHandler(update)
 	default:
 		s.messageCleaner(update.Message.Chat.ID, update.Message.MessageID)
+
+	}
+	if _, found := s.Users[update.Message.From.ID]; found {
+		PrettyPrint(s.Users[update.Message.From.ID])
 	}
 
 }
 
+func (s *Service) VoiceRequestHandler(update *tgbotapi.Update) {
+	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
+	var msgID = update.CallbackQuery.Message.MessageID
+	if _, found := s.Users[userID]; !found {
+		s.CreateUser(userID, chatID, msgID)
+	}
+	s.VoiceRequest(userID, chatID, msgID, nil, false)
+}
+
 func (s *Service) VoiceMessageHandler(update *tgbotapi.Update) {
-
 	userID, chatID, msgID := update.Message.From.ID, update.Message.Chat.ID, update.Message.MessageID
-	s.CopyVoiceToGroup(userID, chatID, msgID)
-	s.VoiceRequest(update)
-	s.UpdateUserRec(userID, s.GetUserWaitWord(userID, chatID, msgID))
 
+	s.CopyVoiceToGroup(userID, chatID, msgID)
+	s.VoiceRequest(userID, chatID, msgID, nil, false)
 }
 
 //Command trigger
@@ -83,10 +129,13 @@ func (s *Service) CopyVoiceToGroup(userID, chatID int64, msgID int) {
 	var copyMsg tgbotapi.CopyMessageConfig
 
 	if _, found := s.Users[userID]; !found {
-		copyMsg = tgbotapi.NewCopyMessageToChannel("@lamabaDatasets", "#Trash_Data", chatID, msgID)
+
+		copyMsg = tgbotapi.NewCopyMessageToChannel("-1001717101880", "#Trash_Data", chatID, msgID)
 		s.CreateUser(userID, chatID, msgID)
 	} else {
-		copyMsg = tgbotapi.NewCopyMessageToChannel("@lamabaDatasets", "#"+WordList[s.Users[userID].GetWaitWord()], chatID, msgID)
+
+		waitWord := WordList[s.Users[userID].Record[s.Users[userID].GetWaitWord()]]
+		copyMsg = tgbotapi.NewCopyMessageToChannel("-1001717101880", "#"+waitWord, chatID, msgID)
 	}
 	copyMsg.ReplyMarkup = AdminsKeyBord
 	s.bot.Send(copyMsg)
