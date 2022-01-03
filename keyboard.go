@@ -1,6 +1,10 @@
 package main
 
-import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+import (
+	"fmt"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
 
 var MainKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
@@ -30,16 +34,17 @@ var pointAtMiddle = tgbotapi.NewInlineKeyboardRow(
 
 var EndeKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("በዲስ አስጀምር", "3"),
+		tgbotapi.NewInlineKeyboardButtonData("በዲስ", "3"),
+		tgbotapi.NewInlineKeyboardButtonData("በቀድሞ", "-3"),
 	), tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("በቀድሞ ቀጥል", "-3"),
+		tgbotapi.NewInlineKeyboardButtonData("𐙞 እኔ", "4"),
 	),
 )
 
 var AdminsKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("አሳልፍ", "4"),
-		tgbotapi.NewInlineKeyboardButtonData("አግድ", "-4"),
+		tgbotapi.NewInlineKeyboardButtonData("አሳልፍ", "5"),
+		tgbotapi.NewInlineKeyboardButtonData("አግድ", "-5"),
 	),
 	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("ላኪውን አግድ", "6"),
@@ -85,4 +90,18 @@ func (s *Service) UserMenu(userID int64) tgbotapi.InlineKeyboardMarkup {
 
 func (s *Service) InlineKeyboardMarkupBuilder(rows ...[]tgbotapi.InlineKeyboardButton) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
+}
+
+func (s *Service) ProfileKeyBodardBuidler(userID int64) tgbotapi.InlineKeyboardMarkup {
+	// botName := @Lambas_bot
+	url := fmt.Sprintf("http://t.me/%s?start=%d", s.bot.Self.UserName, userID)
+	referral := fmt.Sprintf("https://telegram.me/share/url?url=%s&text=%s", url, "ኑ ላምባን እናስትምር")
+
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("ጓደኛ ጋብዝ", referral),
+		), tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("ተመለስ", "0"),
+		),
+	)
 }

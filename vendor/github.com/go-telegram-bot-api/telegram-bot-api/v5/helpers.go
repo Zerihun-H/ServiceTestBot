@@ -6,6 +6,21 @@ import (
 
 // NewMessage creates a new Message.
 //
+// NewMessageForChannel is where to send it, text is the message text.
+func NewMessageForChannel(username, text, parse string, preview bool) MessageConfig {
+	return MessageConfig{
+		BaseChat: BaseChat{
+			ChannelUsername:  username,
+			ReplyToMessageID: 0,
+		},
+		Text:                  text,
+		ParseMode:             parse,
+		DisableWebPagePreview: preview,
+	}
+}
+
+// NewMessage creates a new Message.
+//
 // chatID is where to send it, text is the message text.
 func NewMessage(chatID int64, text, parse string, preview bool) MessageConfig {
 	return MessageConfig{
@@ -70,12 +85,13 @@ func NewCopyMessage(chatID int64, caption string, fromChatID int64, messageID in
 //
 // chatID is where to send it, fromChatID is the source chat,
 // and messageID is the ID of the original message.
-func NewCopyMessageToChannel(username, caption string, fromChatID int64, messageID int) CopyMessageConfig {
+func NewCopyMessageToChannel(username, caption string, fromChatID int64, messageID int, captionEntities ...MessageEntity) CopyMessageConfig {
 	return CopyMessageConfig{
-		BaseChat:   BaseChat{ChannelUsername: username},
-		FromChatID: fromChatID,
-		MessageID:  messageID,
-		Caption:    caption,
+		BaseChat:        BaseChat{ChannelUsername: username},
+		FromChatID:      fromChatID,
+		MessageID:       messageID,
+		Caption:         caption,
+		CaptionEntities: captionEntities,
 	}
 }
 
@@ -123,6 +139,16 @@ func NewDocument(chatID int64, file RequestFileData) DocumentConfig {
 	return DocumentConfig{
 		BaseFile: BaseFile{
 			BaseChat: BaseChat{ChatID: chatID},
+			File:     file,
+		},
+	}
+}
+
+// NewDocument creates a new sendDocument request.
+func NewDocumentChannel(username string, file RequestFileData) DocumentConfig {
+	return DocumentConfig{
+		BaseFile: BaseFile{
+			BaseChat: BaseChat{ChannelUsername: username},
 			File:     file,
 		},
 	}
@@ -596,13 +622,14 @@ func NewEditMessageTextAndMarkup(chatID int64, messageID int, text, parse string
 }
 
 // NewEditMessageCaption allows you to edit the caption of a message.
-func NewEditMessageCaption(chatID int64, messageID int, caption string) EditMessageCaptionConfig {
+func NewEditMessageCaption(chatID int64, messageID int, caption string, capEntities ...MessageEntity) EditMessageCaptionConfig {
 	return EditMessageCaptionConfig{
 		BaseEdit: BaseEdit{
 			ChatID:    chatID,
 			MessageID: messageID,
 		},
-		Caption: caption,
+		Caption:         caption,
+		CaptionEntities: capEntities,
 	}
 }
 

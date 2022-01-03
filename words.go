@@ -8,22 +8,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-var WordList = []string{
-	"ሰላም", "ላምባ", "ከ", "የ", "በ", "ለ", "ኛ", "ደህና", "አደርሽ", "ዋልሽ", "አመሸሽ", "ነሽ",
-	"አይ", "ተዪው", "ይቅር", "አልፈልግም", "በቃኝ", "ይበቃኛል", "ቻው", "እሺ", "አዎ", "እፈልጋለሁ",
-	"ቀጥይ", "ይደገም", "ድገሚ", "ድገሚልኝ", "ድገሚው", "ነው", "ላኪልኝ", "ላኪ", "ላኪው", "አንብቢልኝ",
-	"አዲስ", "ያዢልኝ", "አለ", "አለኝ", "ንገሪኝ", "ሆነ", "ቀኑ", "ላይ", "ተልኮልኛል", "ነበረኝ", "ዘርዝሪሊኝ", "ዘርዝሪ",
-	"አንብቢ", "ስንት", "መልዕክት", "ያዢ", "አስቀምጪ", "የዛሬው", "የዛሬ", "ሲደመር", "ሲቀነስ", "ሲካፈል", "ሲባዛ", "ደምሪ",
-	"ቀንሺ", "አካፍዪ", "አባዢ", "ሰኞ", "ማክሰኞ", "ዕሮብ", "ሀሙስ", "አርብ", "ቅዳሜ", "እሁድ", "ነገ", "ትናት", "ዛሬ", "ድምጽ", "ቀንሺ",
-	"አጥፊ", "ዝቅ", "አርጊ", "ጨምሪልኝ", "ስልክ", "ቁጥሩ", "ቁጥር", "ማንቂያ", "ደውል", "ሙይልኝ", "ሙይ", "ሰአት", "ንገሪኝ", "ቀን", "ቀኑን",
-	"ዜሮ", "አንድ", "ሁለት", "ሶስት", "አራት", "አምስት", "ስድስት", "ሰባት", "ስምንት", "ዘጠኝ", "አስር", "አስራ", "ሃያ", "ሰላሳ", "አርባ",
-	"ሃምሳ", "ስልሳ", "ሰባ", "ሰማንያ", "ዘጠና", "መቶ", "ሺ", "ሚሊየን", "የት", "ምን", "ማን", "እንዴት", "ለምን", "አይነቶች",
-	"ክፍሎች", "ዝርዝሮች", "ዋጋ", "ያህል", "መች", "ትርጉም", "ትርጉሙ", "መቼ", "ማለት", "ምንድን", "ነኝ", "ያለሁበት",
-	"ቦታ", "ያለሁት", "ያህል", "ይርቃል", "እዚህ", "ምን", "አዲስ", "ነገር", "ውሎ", "ዜና", "ነበር", "አየሩ", "ጃኬት",
-	"ጃንጥላ", "መያዝ", "አለብኝ", "የአየር", "ሁኔታ", "መልበስ", "ደውይ", "ደውይልኝ", "ደውይለት",
-	"ደውይላት", "ማስታወሻ", "ቴሌግራም", "ኢሜል", "መጽሐፍ", "ክፍል", "ታሪክ", "ሚስኮል", "ትዕዛዝ"}
-
-func (s *Service) RandWord(userID, chatID int64, msgID int) (string, int) {
+func (s *Service) RandWord(userID int64, msgID int) (string, int) {
 
 	if len(s.Users[userID].Record) == len(WordList) {
 		return "", 0
@@ -48,7 +33,7 @@ func (s *Service) RandWord(userID, chatID int64, msgID int) (string, int) {
 
 func (s *Service) VoiceRequest(userID, chatID int64, msgID int, withPrevious *int, edited bool) {
 	if !edited {
-		s.VoiceRequestWithNewMessage(userID, chatID, msgID, withPrevious)
+		s.VoiceRequestWithNewMessage(userID, msgID, withPrevious)
 		return
 	}
 	s.VoiceRequestWithEditMessage(userID, chatID, msgID, withPrevious)
@@ -70,7 +55,7 @@ func (s *Service) VoiceRequestWithEditMessage(userID, chatID int64, msgID int, w
 
 		s.UpdateWaitWord(userID, nextWord)
 	case withPrevious == nil:
-		word, randValue := s.RandWord(userID, chatID, msgID)
+		word, randValue := s.RandWord(userID, msgID)
 		word = fmt.Sprintf(VoiceRequestMessage, randValue, word)
 		msg = tgbotapi.NewEditMessageTextAndMarkup(chatID, msgID, word, "MarkdownV2", false)
 
@@ -86,41 +71,38 @@ func (s *Service) VoiceRequestWithEditMessage(userID, chatID int64, msgID int, w
 
 }
 
-func (s *Service) VoiceRequestWithNewMessage(userID, chatID int64, msgID int, withPrevious *int) {
+func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevious *int) {
 
 	var msg tgbotapi.MessageConfig
 	lenRecord := len(s.Users[userID].Record)
 	recordPointer := s.Users[userID].RecordPointer
-
-	println("Record Points :", recordPointer)
-	println("Record Lens :", lenRecord)
 
 	switch {
 	case lenRecord > 0 && recordPointer < lenRecord-1 && withPrevious == nil:
 		nextWord := s.Users[userID].RecordPointer + 1
 		waitingWord := s.Users[userID].Record[nextWord]
 		word := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord])
-		msg = tgbotapi.NewMessage(chatID, word, "MarkdownV2", false)
+		msg = tgbotapi.NewMessage(userID, word, "MarkdownV2", false)
 		s.UpdateWaitWord(userID, nextWord)
 	case withPrevious == nil:
-		word, randValue := s.RandWord(userID, chatID, msgID)
+		word, randValue := s.RandWord(userID, msgID)
 		word = fmt.Sprintf(VoiceRequestMessage, randValue, word)
-		msg = tgbotapi.NewMessage(chatID, word, "MarkdownV2", false)
+		msg = tgbotapi.NewMessage(userID, word, "MarkdownV2", false)
 	case withPrevious != nil:
 
 		waitingWord := s.Users[userID].Record[*withPrevious]
 		word := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord])
-		msg = tgbotapi.NewMessage(chatID, word, "MarkdownV2", false)
+		msg = tgbotapi.NewMessage(userID, word, "MarkdownV2", false)
 	}
 
 	msg.ReplyMarkup = s.UserMenu(userID)
 	rep, _ := s.bot.Send(msg)
 
-	s.DeleteOldMsg(userID, chatID, msgID)
-	s.messageCleaner(chatID, msgID)
+	s.DeleteOldMsg(userID, msgID)
+	s.messageCleaner(userID, msgID)
 	//Update Last Message
 	msgID = rep.MessageID
-	s.UpdateUserOldMsg(userID, chatID, msgID)
+	s.UpdateUserOldMsg(userID, msgID)
 }
 
 func (s *Service) CloseVoiceRequest(update *tgbotapi.Update) {
@@ -128,34 +110,19 @@ func (s *Service) CloseVoiceRequest(update *tgbotapi.Update) {
 	var msgID = update.CallbackQuery.Message.MessageID
 
 	if _, found := s.Users[userID]; !found {
-		s.CreateUser(userID, chatID, msgID)
+		s.CreateUser(userID, 0, msgID)
 	}
 
 	msg := tgbotapi.NewMessage(chatID, ThanksMessage, "", true)
 	msg.ReplyMarkup = EndeKeyBord
 	rep, _ := s.bot.Send(msg)
 
-	s.DeleteOldMsg(userID, chatID, msgID)
+	s.DeleteOldMsg(userID, msgID)
 	s.messageCleaner(chatID, msgID)
 
 	msgID = rep.MessageID
-	s.UpdateUserOldMsg(userID, chatID, msgID)
+	s.UpdateUserOldMsg(userID, msgID)
 
-}
-
-func (s *Service) RestartMenu(update *tgbotapi.Update) {
-	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
-	var msgID = update.CallbackQuery.Message.MessageID
-	if _, found := s.Users[userID]; !found {
-		s.CreateUser(userID, chatID, msgID)
-	}
-	//Restart
-	s.Users[userID].Restart()
-
-	msgIDs := s.startMenu(chatID)
-	s.DeleteOldMsg(userID, chatID, msgID)
-	s.messageCleaner(chatID, msgID)
-	s.UpdateUserOldMsg(userID, chatID, msgIDs)
 }
 
 func (u *User) InUserRecord(randIndex int) bool {
