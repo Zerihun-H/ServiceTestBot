@@ -28,11 +28,14 @@ type Service struct {
 	mu      sync.RWMutex
 }
 type Cache struct {
-	Users      map[int64]*User
-	WordList   []string
-	SuperAdmin int64
-	Admin      []int64
-	Blocked    map[int64]int
+	Users        map[int64]*User
+	WordList     []string
+	SuperAdmin   int64
+	Admin        []int64
+	VoiceVersion string
+	Blocked      map[int64]int
+	RankList     []int64
+	Contribution map[int64]int
 }
 
 type User struct {
@@ -45,6 +48,7 @@ type User struct {
 	Datasets      []*VoiceMessage
 	RecordPointer int
 	PhoneNum      string
+	Rank          int
 }
 
 func (u *User) Restart() {
@@ -143,12 +147,13 @@ func (s *Service) New(bot *tgbotapi.BotAPI, updates tgbotapi.UpdatesChannel) *Se
 	s.bot = bot
 	s.updates = updates
 	s.Cache = &Cache{
-		Users:      make(map[int64]*User),
-		SuperAdmin: 1034094796,
-		//513685447
-		WordList: WordList,
-		Admin:    []int64{1034094796},
-		Blocked:  make(map[int64]int),
+		Users:        make(map[int64]*User),
+		WordList:     WordList,
+		SuperAdmin:   1034094796,
+		Admin:        []int64{1034094796},
+		Blocked:      make(map[int64]int),
+		RankList:     []int64{},
+		Contribution: make(map[int64]int),
 	}
 
 	switch {

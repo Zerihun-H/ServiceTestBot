@@ -11,8 +11,10 @@ import (
 //Hnadler Trigger Callback from msg or inline
 func (s *Service) CallbackQueryHandler(update *tgbotapi.Update) {
 	switch update.CallbackQuery.Data {
-	case "1", "-1":
+	case "1":
 		go s.VoiceRequestHandler(update)
+	case "-1":
+		go s.GoEnd(update)
 	case "0":
 		go s.CloseVoiceRequest(update)
 	case "-2":
@@ -71,9 +73,30 @@ func (s *Service) GoNext(update *tgbotapi.Update) {
 		s.VoiceRequest(userID, chatID, msgID, nil, false)
 		return
 	}
+
 	pointer := s.Users[userID].GetWaitWord() + 1
+	lenRec := len(s.Users[userID].Record)
+
+	if pointer >= lenRec {
+		pointer = lenRec - 1
+	}
+
 	s.UpdateWaitWord(userID, pointer)
-	s.VoiceRequest(userID, chatID, msgID, &pointer, true)
+	s.VoiceRequest(userID, chatID, msgID, nil, true)
+}
+
+func (s *Service) GoEnd(update *tgbotapi.Update) {
+	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
+	var msgID = update.CallbackQuery.Message.MessageID
+	if _, found := s.Users[userID]; !found {
+		s.CreateUser(userID, 0, msgID)
+		s.VoiceRequest(userID, chatID, msgID, nil, false)
+		return
+	}
+
+	pointer := len(s.Users[userID].Record)
+	s.UpdateWaitWord(userID, pointer)
+	s.VoiceRequest(userID, chatID, msgID, nil, true)
 }
 
 func (s *Service) GoBack(update *tgbotapi.Update) {
@@ -86,6 +109,9 @@ func (s *Service) GoBack(update *tgbotapi.Update) {
 	}
 
 	pointer := s.Users[userID].GetWaitWord() - 1
+	if pointer < 0 {
+		pointer = 0
+	}
 	s.UpdateWaitWord(userID, pointer)
 	s.VoiceRequest(userID, chatID, msgID, &pointer, true)
 

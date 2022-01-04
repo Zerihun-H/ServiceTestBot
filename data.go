@@ -11,8 +11,11 @@ var MainMessage string = `[ㅤ](https://hexaddis.com/tut.gif)◍◍◌◌◌◎�
 
 ◦ ለመጀመር ከስር ያለውን አዝራር ይጫኑ ◦`
 
-var VoiceRequestMessage string = `[ㅤ](https://hexaddis.com/%d.ogg) ካታች ያለውን ቃል ደግመው ይላኩልኝ
+var VoiceRequestMessage string = `[ㅤ](https://hexaddis.com/voice/%d.ogg) ካታች ያለውን ቃል ደግመው ይላኩልኝ
 ㅤㅤㅤ◌◎◍ \#%s\ ◍◎◌
+
+ㅤ%s
+ㅤ
 `
 
 var ThanksMessage string = `┌˚❀̥──◌─ ላምባ ──◌─❀̥˚┐
@@ -61,7 +64,7 @@ var WordList = []string{
 func (s *Service) ProfileMsgBuilder(userID int64, msgID int) string {
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		return fmt.Sprintf(profile, 0, 0, 0, 0, 0)
+		return fmt.Sprintf(profile, 0, 0, 0, 0, 21)
 	}
 	var totalVoice, totalconfirmed int
 	totalVoice = len(s.Users[userID].Datasets)
@@ -74,5 +77,5 @@ func (s *Service) ProfileMsgBuilder(userID int64, msgID int) string {
 		}
 	}
 
-	return fmt.Sprintf(profile, totalVoice, remainVoice, totalconfirmed, Invition, 1)
+	return fmt.Sprintf(profile, totalVoice, remainVoice, totalconfirmed, Invition, 21)
 }

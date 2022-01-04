@@ -50,30 +50,36 @@ func (s *Service) VoiceRequestWithEditMessage(userID, chatID int64, msgID int, w
 	case lenRecord > 0 && recordPointer < lenRecord-1 && withPrevious == nil:
 		nextWord := s.Users[userID].RecordPointer + 1
 		waitingWord := s.Users[userID].Record[nextWord]
-		text := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord])
+		text := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord], s.PageViewBuilder(userID))
 		msg = tgbotapi.NewEditMessageTextAndMarkup(chatID, msgID, text, "MarkdownV2", false)
 
 		s.UpdateWaitWord(userID, nextWord)
 	case withPrevious == nil:
 		word, randValue := s.RandWord(userID, msgID)
-		word = fmt.Sprintf(VoiceRequestMessage, randValue, word)
+		word = fmt.Sprintf(VoiceRequestMessage, randValue, word, s.PageViewBuilder(userID))
 		msg = tgbotapi.NewEditMessageTextAndMarkup(chatID, msgID, word, "MarkdownV2", false)
 
 	case withPrevious != nil:
 		waitingWord := s.Users[userID].Record[*withPrevious]
 		word := WordList[waitingWord]
-		word = fmt.Sprintf(VoiceRequestMessage, waitingWord, word)
+		word = fmt.Sprintf(VoiceRequestMessage, waitingWord, word, s.PageViewBuilder(userID))
 		msg = tgbotapi.NewEditMessageTextAndMarkup(chatID, msgID, word, "MarkdownV2", false)
 	}
 	Keyboard := s.UserMenu(userID)
 	msg.ReplyMarkup = &Keyboard
-	s.bot.Send(msg)
+
+	if _, err := s.bot.Send(msg); err != nil {
+		s.ReportToAdmin(err.Error())
+	}
 
 }
 
 func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevious *int) {
 
 	var msg tgbotapi.MessageConfig
+	var rep tgbotapi.Message
+	var err error
+
 	lenRecord := len(s.Users[userID].Record)
 	recordPointer := s.Users[userID].RecordPointer
 
@@ -81,22 +87,26 @@ func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevio
 	case lenRecord > 0 && recordPointer < lenRecord-1 && withPrevious == nil:
 		nextWord := s.Users[userID].RecordPointer + 1
 		waitingWord := s.Users[userID].Record[nextWord]
-		word := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord])
+		word := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord], s.PageViewBuilder(userID))
 		msg = tgbotapi.NewMessage(userID, word, "MarkdownV2", false)
 		s.UpdateWaitWord(userID, nextWord)
 	case withPrevious == nil:
 		word, randValue := s.RandWord(userID, msgID)
-		word = fmt.Sprintf(VoiceRequestMessage, randValue, word)
+		word = fmt.Sprintf(VoiceRequestMessage, randValue, word, s.PageViewBuilder(userID))
 		msg = tgbotapi.NewMessage(userID, word, "MarkdownV2", false)
 	case withPrevious != nil:
 
 		waitingWord := s.Users[userID].Record[*withPrevious]
-		word := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord])
+		word := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord], s.PageViewBuilder(userID))
 		msg = tgbotapi.NewMessage(userID, word, "MarkdownV2", false)
 	}
 
 	msg.ReplyMarkup = s.UserMenu(userID)
-	rep, _ := s.bot.Send(msg)
+
+	if rep, err = s.bot.Send(msg); err != nil {
+		s.ReportToAdmin(err.Error())
+		return
+	}
 
 	s.DeleteOldMsg(userID, msgID)
 	s.messageCleaner(userID, msgID)
@@ -116,7 +126,7 @@ func (s *Service) CloseVoiceRequest(update *tgbotapi.Update) {
 	msg := tgbotapi.NewMessage(chatID, ThanksMessage, "", true)
 	msg.ReplyMarkup = EndeKeyBord
 	rep, _ := s.bot.Send(msg)
-
+	go s.Users[userID].UpdateWaitWord(0)
 	s.DeleteOldMsg(userID, msgID)
 	s.messageCleaner(chatID, msgID)
 
