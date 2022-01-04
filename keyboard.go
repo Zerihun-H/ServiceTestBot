@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	separator    = "⬩"
+	separator    = "⦁"
 	continueIcon = "᠁"
 	opener       = "⎾"
 	closer       = "⏌"
@@ -42,13 +42,13 @@ func (b *Builder) Execute() {
 
 var MainKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("ጀመር", "1"),
+		tgbotapi.NewInlineKeyboardButtonData("ጀምር", "1"),
 	),
 )
 
 var MenuButton = tgbotapi.NewInlineKeyboardRow(
 	tgbotapi.NewInlineKeyboardButtonData("⨴ በቃኝ", "0"),
-	tgbotapi.NewInlineKeyboardButtonData("ሌላ ↺", "-1"),
+	tgbotapi.NewInlineKeyboardButtonData("ሌላ ⨮", "-1"),
 )
 
 var pointAtFirst = tgbotapi.NewInlineKeyboardRow(
@@ -68,8 +68,8 @@ var pointAtMiddle = tgbotapi.NewInlineKeyboardRow(
 
 var EndeKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("በዲስ", "3"),
-		tgbotapi.NewInlineKeyboardButtonData("በቀድሞ", "-3"),
+		tgbotapi.NewInlineKeyboardButtonData("↻ በአዲስ", "3"),
+		tgbotapi.NewInlineKeyboardButtonData("በቀድሞ ⟴", "-3"),
 	), tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("𐙞 እኔ", "4"),
 	),
@@ -77,8 +77,8 @@ var EndeKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 
 var AdminsKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("አሳልፍ", "5"),
-		tgbotapi.NewInlineKeyboardButtonData("አግድ", "-5"),
+		tgbotapi.NewInlineKeyboardButtonData("⊗ አሳልፍ ", "5"),
+		tgbotapi.NewInlineKeyboardButtonData("አግድ ⊖", "-5"),
 	),
 	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("ላኪውን አግድ", "6"),

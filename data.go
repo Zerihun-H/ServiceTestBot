@@ -11,7 +11,7 @@ var MainMessage string = `[ㅤ](https://hexaddis.com/tut.gif)◍◍◌◌◌◎�
 
 ◦ ለመጀመር ከስር ያለውን አዝራር ይጫኑ ◦`
 
-var VoiceRequestMessage string = `[ㅤ](https://hexaddis.com/voice/%d.ogg) ካታች ያለውን ቃል ደግመው ይላኩልኝ
+var VoiceRequestMessage string = `[ㅤ](https://hexaddis.com/voice/%d.ogg) ከታች ያለውን ቃል ደግመው ይላኩልኝ
 ㅤㅤㅤ◌◎◍ \#%s\ ◍◎◌
 
 ㅤ%s
@@ -26,15 +26,15 @@ var ThanksMessage string = `┌˚❀̥──◌─ ላምባ ──◌─❀̥˚
 var profile string = `❁✼✼✭✤✥✤✬❉❈❋✷❊✵❉
 ❋
 ✼     ጠቅላላ የድምፅ ቅጂ 
-✾ㅤㅤㅤㅤㅤ=%d
+✾ㅤㅤㅤㅤㅤ↳%d
 ✥  ቀሪ  ያልተቀዳ ድምፅ ብዛት 
-❊ㅤㅤㅤㅤㅤ=%d
-❈      የተጣራ የድምፅ ብዛት
-❋ㅤㅤㅤㅤㅤ=%d
-✼ㅤㅤㅤ የተጋባዥ ብዛት
-❉ㅤㅤㅤㅤㅤ=%d
-❊ㅤㅤㅤㅤㅤደረጃ
-✵ㅤㅤㅤㅤㅤ=%d
+❊ㅤㅤㅤㅤㅤ↳%d
+❈ㅤㅤየተጣራ የድምፅ ብዛት
+❋ㅤㅤㅤㅤㅤ↳%d
+✼ㅤㅤᴥ የተጋባዥ ብዛት ᴥ 
+❉ㅤㅤㅤㅤㅤ↳%d
+❊ㅤㅤㅤㅤ𐃫 ደረጃ 𐃫
+✵ㅤㅤㅤㅤㅤ↳%d
 ❉`
 
 var AlertMessage string = `[ㅤ](https://hexaddis.com/manual.jpg)እባክዎ ድምፅ ብቻ ይላኩልኝ 
@@ -45,6 +45,8 @@ var BlockNotice string = `ለግዜው ስለታገዱ የ ቦቱን አስተ�
 
 ➥ [[ዋና አስተዳደር]((tg://user?id=395490182)](https://t.me/Tom201513)
 ➥ [[ምክትል አስተዳደር](tg://user?id=1279237180)](https://t.me/LambaSupport)`
+
+var BlockedNotice string = `User %s Blocked By`
 
 var WordList = []string{
 	"ሰላም", "ላምባ", "ከ", "የ", "በ", "ለ", "ኛ", "ደህና", "አደርሽ", "ዋልሽ", "አመሸሽ", "ነሽ",
@@ -64,7 +66,7 @@ var WordList = []string{
 func (s *Service) ProfileMsgBuilder(userID int64, msgID int) string {
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		return fmt.Sprintf(profile, 0, 0, 0, 0, 21)
+		return fmt.Sprintf(profile, 0, 0, 0, 0)
 	}
 	var totalVoice, totalconfirmed int
 	totalVoice = len(s.Users[userID].Datasets)

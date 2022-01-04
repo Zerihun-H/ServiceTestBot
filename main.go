@@ -367,7 +367,6 @@ func (s *Service) CountInvitation(inviter int64) int {
 func (s *Service) MakeNotice(msgText string, userID int64, msgID int) {
 	msg := tgbotapi.NewMessage(userID, msgText, "MarkdownV2", true)
 	rep, err := s.bot.Send(msg)
-	s.ReportToAdmin(fmt.Sprintf("User ID %d Blocked", userID))
 	if err != nil {
 		s.ReportToAdmin(err.Error())
 	}

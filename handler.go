@@ -238,6 +238,7 @@ func (s *Service) BlockUser(update *tgbotapi.Update) {
 	captions := strings.Fields(update.CallbackQuery.Message.Caption)
 	userID, _ := strconv.ParseInt(captions[2], 10, 64)
 	s.Blocked[userID] = update.CallbackQuery.Message.MessageID
+	s.ReportToAdmin(fmt.Sprintf("User ID %d Blocked", userID))
 	s.MakeNotice(BlockNotice, userID, update.CallbackQuery.Message.MessageID)
 }
 
