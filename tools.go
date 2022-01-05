@@ -37,7 +37,10 @@ func (s *Service) BackupCache(filename string) {
 	}
 	defer file.Close()
 	encoder := gob.NewEncoder(file)
-	encoder.Encode(s.Cache)
+
+	if err = encoder.Encode(s.Cache); nil != err {
+		s.ReportToAdmin(err.Error())
+	}
 }
 
 func (s *Service) LoadBackup(filename string) {
@@ -48,7 +51,9 @@ func (s *Service) LoadBackup(filename string) {
 	}
 	defer file.Close()
 	decoder := gob.NewDecoder(file)
-	decoder.Decode(s.Cache)
+	if err = decoder.Decode(s.Cache); err != nil {
+		s.ReportToAdmin(err.Error())
+	}
 }
 
 func (s *Service) ReportToAdmin(msgText string) {
