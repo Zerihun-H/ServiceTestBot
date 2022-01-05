@@ -764,11 +764,11 @@ func NewInlineKeyboardMarkup(rows ...[]InlineKeyboardButton) InlineKeyboardMarku
 }
 
 // NewCallback creates a new callback message.
-func NewCallback(id, text string) CallbackConfig {
+func NewCallback(id, text string, alert bool) CallbackConfig {
 	return CallbackConfig{
 		CallbackQueryID: id,
 		Text:            text,
-		ShowAlert:       false,
+		ShowAlert:       alert,
 	}
 }
 

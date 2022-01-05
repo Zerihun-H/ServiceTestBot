@@ -97,9 +97,18 @@ var AdminKeyBoard = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardButtonData("Get Cache ", "9"),
 	),
 	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("Update Voice Path", "10"),
+	),
+	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("Update Words", "10"),
 		tgbotapi.NewInlineKeyboardButtonData("Update Caches", "11"),
 	),
+
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("Block", "10"),
+		tgbotapi.NewInlineKeyboardButtonData("leaderboard", "11"),
+	),
+
 	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("Analytics ", "12"),
 	),

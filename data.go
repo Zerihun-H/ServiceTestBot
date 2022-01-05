@@ -11,7 +11,10 @@ var MainMessage string = `[ㅤ](https://hexaddis.com/tut.gif)◍◍◌◌◌◎�
 
 ◦ ለመጀመር ከስር ያለውን አዝራር ይጫኑ ◦`
 
-var VoiceRequestMessage string = `[ㅤ](https://hexaddis.com/voice/%d.ogg) ከታች ያለውን ቃል ደግመው ይላኩልኝ
+// var TooManyMessage string = `Too many requests Please try again  latter`
+var TooManyMessage string = `በጣም ብዙ ጥያቄዎችን አድርገዋል እባክዎ በእርጋታ ይጠቀሙ`
+
+var VoiceRequestMessage string = `[ㅤ](https://hexaddis.com/voice01/%d.ogg) ከታች ያለውን ቃል ደግመው ይላኩልኝ
 ㅤㅤㅤ◌◎◍ \#%s\ ◍◎◌
 
 ㅤ%s
@@ -44,7 +47,7 @@ var AlertMessage string = `[ㅤ](https://hexaddis.com/manual.jpg)እባክዎ �
 var BlockNotice string = `ለግዜው ስለታገዱ የ ቦቱን አስተዳደር ያናግሩ \!\
 
 ➥ [[ዋና አስተዳደር]((tg://user?id=395490182)](https://t.me/Tom201513)
-➥ [[ምክትል አስተዳደር](tg://user?id=1279237180)](https://t.me/LambaSupport)`
+➥ [[ምክትል አስተዳደር](tg://user?id=5084305533)](https://t.me/LambaSupport)`
 
 var BlockedNotice string = `User %s Blocked By`
 
@@ -64,20 +67,16 @@ var WordList = []string{
 	"ደውይላት", "ማስታወሻ", "ቴሌግራም", "ኢሜል", "መጽሐፍ", "ክፍል", "ታሪክ", "ምዕራፍ", "ሚስኮል", "ትዕዛዝ"}
 
 func (s *Service) ProfileMsgBuilder(userID int64, msgID int) string {
-	if _, found := s.Users[userID]; !found {
+	var user *User
+	var found bool
+
+	if user, found = s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
 		return fmt.Sprintf(profile, 0, 0, 0, 0)
 	}
-	var totalVoice, totalconfirmed int
-	totalVoice = len(s.Users[userID].Datasets)
+
+	totalVoice := len(user.Datasets)
 	remainVoice := len(s.WordList) - totalVoice
-	Invition := len(s.Users[userID].Invited)
 
-	for _, data := range s.Users[userID].Datasets {
-		if data.Confirmed {
-			totalconfirmed = +1
-		}
-	}
-
-	return fmt.Sprintf(profile, totalVoice, remainVoice, totalconfirmed, Invition, 21)
+	return fmt.Sprintf(profile, totalVoice, remainVoice, user.Confirmed, len(user.Invited), user.Rank)
 }

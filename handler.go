@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+type CallbackQueryHandler func(*tgbotapi.Update)
 
 //Hnadler Trigger Callback from msg or inline
 func (s *Service) CallbackQueryHandler(update *tgbotapi.Update) {
@@ -14,13 +17,13 @@ func (s *Service) CallbackQueryHandler(update *tgbotapi.Update) {
 	case "1":
 		go s.VoiceRequestHandler(update)
 	case "-1":
-		go s.GoEnd(update)
+		go s.AnswerCallbackQuery(s.GoEnd, update, "ሌላ")
 	case "0":
 		go s.CloseVoiceRequest(update)
 	case "-2":
-		go s.GoBack(update)
+		go s.AnswerCallbackQuery(s.GoBack, update, "ወደኋላ")
 	case "2":
-		go s.GoNext(update)
+		go s.AnswerCallbackQuery(s.GoNext, update, "ቀጣይ")
 	case "3":
 		go s.RestartMenu(update)
 	case "-3":
@@ -38,6 +41,42 @@ func (s *Service) CallbackQueryHandler(update *tgbotapi.Update) {
 		go s.MoveBack(update)
 	}
 
+}
+
+func (s *Service) Requested(userID int64, msgID int) bool {
+	var user *User
+	var found bool
+
+	if user, found = s.Users[userID]; !found {
+		s.CreateUser(userID, 0, msgID)
+		s.Request[userID] = s.Request[userID] + 1
+		s.Users[userID].RequestTime = time.Now().UnixNano()
+		return true
+	}
+	if s.Request[userID]+1 > 10 {
+		s.Blocked[userID] = msgID
+		s.MakeNotice(BlockNotice, userID, msgID)
+		s.ReportToAdmin(fmt.Sprintf("User ID [%d](tg://user?id=%d) Blocked by LamabaBot", userID, userID))
+		return false
+	}
+
+	timeDiff := time.Since(time.Unix(0, user.RequestTime))
+
+	if timeDiff.Seconds() < 1.5 {
+		s.Request[userID] = s.Request[userID] + 1
+		s.Users[userID].RequestTime = time.Now().UnixNano()
+		return false
+	}
+	s.Request[userID] = s.Request[userID] + 1
+	s.Users[userID].RequestTime = time.Now().UnixNano()
+
+	return true
+
+}
+
+func (s *Service) AnswerCallbackQuery(nextFunc CallbackQueryHandler, update *tgbotapi.Update, msg string) {
+	go s.Callback(update.CallbackQuery.ID, msg, false)
+	nextFunc(update)
 }
 
 //Command trigger
@@ -94,9 +133,10 @@ func (s *Service) GoEnd(update *tgbotapi.Update) {
 		return
 	}
 
-	pointer := len(s.Users[userID].Record)
+	pointer := len(s.Users[userID].Record) - 1
 	s.UpdateWaitWord(userID, pointer)
-	s.VoiceRequest(userID, chatID, msgID, nil, true)
+
+	s.VoiceRequest(userID, chatID, msgID, nil, false)
 }
 
 func (s *Service) GoBack(update *tgbotapi.Update) {
@@ -125,12 +165,17 @@ func (s *Service) ChosenInlineResultHandler(update *tgbotapi.Update) {}
 
 //TextMessageTrigger
 func (s *Service) MessageHandler(update *tgbotapi.Update) {
+	var userID, msgID = update.Message.From.ID, update.Message.MessageID
+
 	switch {
 	case update.Message.Command() != "":
-		go s.CommandHandler(update)
+		go s.HandleUpdate(s.CommandHandler, update, userID, msgID)
 	case update.Message.Voice != nil:
-		go s.HandleUpdate(s.VoiceMessageHandler, update, update.Message.From.ID, update.Message.MessageID)
+		go s.HandleUpdate(s.VoiceMessageHandler, update, userID, msgID)
 	default:
+		if !s.Requested(userID, msgID) {
+			s.MakeNotice(TooManyMessage, userID, msgID)
+		}
 		s.messageCleaner(update.Message.Chat.ID, update.Message.MessageID)
 	}
 }
@@ -175,15 +220,18 @@ func (s *Service) CopyVoiceToGroup(user *tgbotapi.User, fileID string, msgID int
 		}
 
 	}
+
 	copyMsg.ReplyMarkup = AdminsKeyBord
 
 	if groupMsg, err = s.bot.Send(copyMsg); err == nil {
+		s.mu.Lock()
 		s.Users[user.ID].Datasets = append(s.Users[user.ID].Datasets, &VoiceMessage{
 			MsgID:      groupMsg.MessageID,
 			VoiceIndex: s.Users[user.ID].GetWaitWord(),
 			Confirmed:  false,
 			FileID:     fileID,
 		})
+		s.mu.Unlock()
 
 		return
 	}
@@ -192,16 +240,19 @@ func (s *Service) CopyVoiceToGroup(user *tgbotapi.User, fileID string, msgID int
 
 //
 func (s *Service) ConfirmDataSet(update *tgbotapi.Update) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	captions := strings.Fields(update.CallbackQuery.Message.Caption)
 	userID, _ := strconv.ParseInt(captions[2], 10, 64)
 	if u, found := s.Users[userID]; found {
+		u.Confirmed++
 		for v := range u.Datasets {
 			if u.Datasets[v].MsgID == update.CallbackQuery.Message.MessageID {
 				u.Datasets[v].Confirmed = true
 			}
 		}
 	}
-
 	// noHashes := strings.Replace(update.CallbackQuery.Message.Caption, "#", "", 1)
 	// PrettyPrint(noHashes)
 
@@ -214,6 +265,9 @@ func (s *Service) ConfirmDataSet(update *tgbotapi.Update) {
 
 //
 func (s *Service) RejectDataset(update *tgbotapi.Update) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	var chatID, msgID = update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID
 
 	oldMsg := update.CallbackQuery.Message.Caption
@@ -257,4 +311,19 @@ func (s *Service) Profile(update *tgbotapi.Update) {
 	//Update Last Message
 	msgID = rep.MessageID
 	s.UpdateUserOldMsg(chatID, msgID)
+}
+
+func (s *Service) Limiter(sec int64) {
+	for {
+		time.Sleep(time.Duration(sec) * time.Second)
+		s.Request = make(map[int64]int)
+	}
+}
+
+func (s *Service) Callback(id, msg string, alert bool) {
+	callback := tgbotapi.NewCallback(id, msg, alert)
+	if _, err := s.bot.Request(callback); err != nil {
+		s.ReportToAdmin(err.Error())
+	}
+
 }

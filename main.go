@@ -1,13 +1,8 @@
 package main
 
 import (
-	"encoding/gob"
-	"errors"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -19,7 +14,18 @@ import (
 
 type UpFunc func(*tgbotapi.Update)
 
-var token string = "5005564686:AAGyPZX32onyXWCRGdkIq804LPmqBCgo3O0"
+var token string = "5055129108:AAHq6BeMI4qCDWU9Xp0EW-4xJukqXMZ9FVA"
+
+type Pair struct {
+	Key   int64
+	Value float32
+}
+
+type RankList []Pair
+
+func (p RankList) Len() int           { return len(p) }
+func (p RankList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p RankList) Less(i, j int) bool { return p[i].Value > p[j].Value }
 
 type Service struct {
 	*Cache
@@ -34,8 +40,10 @@ type Cache struct {
 	Admin        []int64
 	VoiceVersion string
 	Blocked      map[int64]int
-	RankList     []int64
-	Contribution map[int64]int
+	RankList
+	HighestInvention int
+	Request          map[int64]int
+	Contribution     map[int64]int
 }
 
 type User struct {
@@ -43,12 +51,14 @@ type User struct {
 	InvitedBy     int64
 	Invited       []int64
 	Record        []int
-	Rejected      int32
-	Confirmed     int32
+	Rejected      int
+	Confirmed     int
 	Datasets      []*VoiceMessage
 	RecordPointer int
 	PhoneNum      string
 	Rank          int
+	Avarage       float32
+	RequestTime   int64
 }
 
 func (u *User) Restart() {
@@ -91,6 +101,9 @@ func main() {
 	service.New(bot, updates)
 
 	go service.Doctor(60)
+	go service.Dispatcher(15)
+	go service.Leaderboard(15)
+
 	service.Start()
 	bot.LogOut()
 	time.Sleep(10 * time.Minute)
@@ -114,32 +127,17 @@ func (s *Service) Start() {
 		}
 	}
 }
-
-func (s *Service) AskCache() {
-	var FileID string
-	s.ReportToAdmin("please send to me a last updated Cache")
-	for update := range s.updates {
-		if update.Message != nil {
-			if s.SuperAdmin == update.Message.From.ID {
-				if update.Message.Text == "!" || update.Message.Command() == "start" {
-					s.messageCleaner(update.Message.Chat.ID, update.Message.MessageID)
-					return
-				}
-				if update.Message.Document != nil {
-					FileID = update.Message.Document.FileID
-					break
-				}
-			}
-			s.messageCleaner(update.Message.Chat.ID, update.Message.MessageID)
-		}
-	}
-	if fileURL, err := s.bot.GetFileDirectURL(FileID); err == nil {
-		if err = s.DownloadFile("cache.gob", fileURL); err == nil {
-			s.LoadBackup("cache")
-			s.ReportToAdmin("successfully Updated Cache")
-			return
-		}
-		s.ReportToAdmin(err.Error())
+func (s *Service) HandleUpdate(nextFunc UpFunc, update *tgbotapi.Update, userID int64, msgID int) {
+	var requested = !s.Requested(userID, msgID)
+	switch {
+	case s.IsBlock(userID):
+		go s.MakeNotice(BlockNotice, userID, msgID)
+	case requested && update.CallbackQuery != nil:
+		go s.Callback(update.CallbackQuery.ID, TooManyMessage, true)
+	case requested:
+		go s.MakeNotice(TooManyMessage, userID, msgID)
+	default:
+		go nextFunc(update)
 	}
 }
 
@@ -147,13 +145,16 @@ func (s *Service) New(bot *tgbotapi.BotAPI, updates tgbotapi.UpdatesChannel) *Se
 	s.bot = bot
 	s.updates = updates
 	s.Cache = &Cache{
-		Users:        make(map[int64]*User),
-		WordList:     WordList,
-		SuperAdmin:   1034094796,
-		Admin:        []int64{1034094796},
-		Blocked:      make(map[int64]int),
-		RankList:     []int64{},
-		Contribution: make(map[int64]int),
+		Users:            make(map[int64]*User),
+		WordList:         WordList,
+		SuperAdmin:       1034094796,
+		Admin:            []int64{1034094796},
+		VoiceVersion:     "",
+		Blocked:          make(map[int64]int),
+		RankList:         []Pair{},
+		HighestInvention: 0,
+		Request:          make(map[int64]int),
+		Contribution:     make(map[int64]int),
 	}
 
 	switch {
@@ -230,6 +231,7 @@ func (s *Service) Home(update *tgbotapi.Update) {
 	if len(messages) > 1 {
 		inviter, _ = strconv.ParseInt(messages[1], 10, 64)
 	}
+
 	if inviter != 0 && inviter != userID {
 		s.AddInvitation(inviter, userID)
 	}
@@ -339,20 +341,17 @@ func (s *Service) IsBlock(usrID int64) bool {
 	return false
 }
 
-func (s *Service) HandleUpdate(nextFunc UpFunc, update *tgbotapi.Update, userID int64, msgID int) {
-	switch {
-	case s.IsBlock(userID):
-		go s.MakeNotice(BlockNotice, userID, msgID)
-	default:
-		go nextFunc(update)
-	}
-}
-
 func (s *Service) AddInvitation(inviter, userID int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if _, found := s.Users[inviter]; !found {
 		s.CreateUser(inviter, 0, 0)
 	}
+
 	s.Users[inviter].Invited = append(s.Users[inviter].Invited, userID)
+	if len(s.Users[inviter].Invited) > s.HighestInvention {
+		s.HighestInvention = len(s.Users[inviter].Invited)
+	}
 }
 
 func (s *Service) CountInvitation(inviter int64) int {
@@ -362,100 +361,4 @@ func (s *Service) CountInvitation(inviter int64) int {
 	}
 
 	return len(s.Users[inviter].Invited)
-}
-
-func (s *Service) MakeNotice(msgText string, userID int64, msgID int) {
-	msg := tgbotapi.NewMessage(userID, msgText, "MarkdownV2", true)
-	rep, err := s.bot.Send(msg)
-	if err != nil {
-		s.ReportToAdmin(err.Error())
-	}
-
-	if msgID != 0 {
-		s.DeleteOldMsg(userID, msgID)
-	}
-
-	s.UpdateUserOldMsg(userID, rep.MessageID)
-	s.messageCleaner(userID, msgID)
-}
-
-func (s *Service) BackupCache(filename string) {
-	var file *os.File
-	var err error
-	if file, err = os.Create(fmt.Sprintf("%s.gob", filename)); err != nil {
-		s.ReportToAdmin(err.Error())
-	}
-	defer file.Close()
-	encoder := gob.NewEncoder(file)
-	encoder.Encode(s.Cache)
-}
-
-func (s *Service) LoadBackup(filename string) {
-	var file *os.File
-	var err error
-	if file, err = os.Open(fmt.Sprintf("%s.gob", filename)); err != nil {
-		s.ReportToAdmin(err.Error())
-	}
-	defer file.Close()
-	decoder := gob.NewDecoder(file)
-	decoder.Decode(s.Cache)
-}
-
-func (s *Service) Doctor(sec int64) {
-	for {
-		time.Sleep(time.Duration(sec) * time.Second)
-		s.BackupCache("cache")
-		fileBackUp := tgbotapi.NewDocumentChannel("-1001777959481", tgbotapi.FilePath("cache.gob"))
-		if _, err := s.bot.Send(fileBackUp); err != nil {
-			s.ReportToAdmin(err.Error())
-		}
-	}
-}
-
-func (s *Service) ReportToAdmin(msgText string) {
-	if _, err := s.SendMessage(s.SuperAdmin, msgText, "", false); err != nil {
-		fmt.Printf("errors %s", err.Error())
-	}
-
-}
-
-func (s *Service) DownloadFile(filepath string, url string) (err error) {
-
-	// Create the file
-	out, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Check server response
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
-	}
-
-	// Writer the body to file
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Service) Exists(name string) bool {
-	_, err := os.Stat(name)
-	if err == nil {
-		return true
-	}
-	if errors.Is(err, os.ErrNotExist) {
-		return false
-	}
-	return false
 }
