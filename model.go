@@ -8,7 +8,7 @@ import (
 
 type UpFunc func(*tgbotapi.Update)
 
-var token string = "5055129108:AAHq6BeMI4qCDWU9Xp0EW-4xJukqXMZ9FVA"
+var token string = "5005564686:AAGyPZX32onyXWCRGdkIq804LPmqBCgo3O0"
 
 type Pair struct {
 	Key   int64
