@@ -48,12 +48,17 @@ func (s *Service) VoiceRequestWithEditMessage(userID, chatID int64, msgID int, w
 
 	switch {
 	case lenRecord > 0 && recordPointer < lenRecord-1 && withPrevious == nil:
-		nextWord := s.Users[userID].RecordPointer + 1
-		waitingWord := s.Users[userID].Record[nextWord]
-		text := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord], s.PageViewBuilder(userID))
-		msg = tgbotapi.NewEditMessageTextAndMarkup(chatID, msgID, text, "MarkdownV2", false)
-
-		s.UpdateWaitWord(userID, nextWord)
+		if lenRecord == 0 {
+			word, randValue := s.RandWord(userID, msgID)
+			word = fmt.Sprintf(VoiceRequestMessage, randValue, word, s.PageViewBuilder(userID))
+			msg = tgbotapi.NewEditMessageTextAndMarkup(chatID, msgID, word, "MarkdownV2", false)
+		} else {
+			nextWord := s.Users[userID].RecordPointer + 1
+			waitingWord := s.Users[userID].Record[nextWord]
+			text := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord], s.PageViewBuilder(userID))
+			msg = tgbotapi.NewEditMessageTextAndMarkup(chatID, msgID, text, "MarkdownV2", false)
+			s.UpdateWaitWord(userID, nextWord)
+		}
 	case withPrevious == nil:
 		word, randValue := s.RandWord(userID, msgID)
 		word = fmt.Sprintf(VoiceRequestMessage, randValue, word, s.PageViewBuilder(userID))
@@ -91,11 +96,18 @@ func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevio
 
 	switch {
 	case lenRecord > 0 && recordPointer < lenRecord-1 && withPrevious == nil:
-		nextWord := recordPointer + 1
-		waitingWord := s.Users[userID].Record[nextWord]
-		word := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord], s.PageViewBuilder(userID))
-		msg = tgbotapi.NewMessage(userID, word, "MarkdownV2", false)
-		s.UpdateWaitWord(userID, nextWord)
+		if lenRecord == 0 {
+			word, randValue := s.RandWord(userID, msgID)
+			word = fmt.Sprintf(VoiceRequestMessage, randValue, word, s.PageViewBuilder(userID))
+			msg = tgbotapi.NewMessage(userID, word, "MarkdownV2", false)
+
+		} else {
+			nextWord := recordPointer + 1
+			waitingWord := s.Users[userID].Record[nextWord]
+			word := fmt.Sprintf(VoiceRequestMessage, waitingWord, WordList[waitingWord], s.PageViewBuilder(userID))
+			msg = tgbotapi.NewMessage(userID, word, "MarkdownV2", false)
+			s.UpdateWaitWord(userID, nextWord)
+		}
 	case withPrevious == nil:
 		word, randValue := s.RandWord(userID, msgID)
 		word = fmt.Sprintf(VoiceRequestMessage, randValue, word, s.PageViewBuilder(userID))

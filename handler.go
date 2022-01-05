@@ -48,9 +48,6 @@ func (s *Service) Requested(userID int64, msgID int) bool {
 	var found bool
 
 	if user, found = s.Users[userID]; !found {
-		s.CreateUser(userID, 0, msgID)
-		s.Request[userID] = s.Request[userID] + 1
-		s.Users[userID].RequestTime = time.Now().UnixNano()
 		return true
 	}
 	if s.Request[userID]+1 > 10 {
@@ -198,11 +195,11 @@ func (s *Service) VoiceMessageHandler(update *tgbotapi.Update) {
 func (s *Service) PhotoMessageHandler(update tgbotapi.Update) {}
 
 func (s *Service) AdminView() {
-	for update := range s.updates {
-		if update.Message != nil {
-			fmt.Print("Admin view handle ")
-		}
-	}
+	// for update := range s.updates {
+	// 	if update.Message != nil {
+
+	// 	}
+	// }
 }
 
 func (s *Service) CopyVoiceToGroup(user *tgbotapi.User, fileID string, msgID int) {
