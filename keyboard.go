@@ -88,7 +88,7 @@ var AdminsKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 //
 var MoveBackKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("መልስ ➥", "7"),
+		tgbotapi.NewInlineKeyboardButtonData("⇜ መልስ", "7"),
 	))
 
 var AdminKeyBoard = tgbotapi.NewInlineKeyboardMarkup(
@@ -215,7 +215,7 @@ func (s *Service) ProfileKeyBodardBuidler(userID int64) tgbotapi.InlineKeyboardM
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonURL("ጓደኛ ጋብዝ", referral),
 		), tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("ተመለስ", "0"),
+			tgbotapi.NewInlineKeyboardButtonData("⇜ ተመለስ", "0"),
 		),
 	)
 }

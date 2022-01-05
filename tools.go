@@ -185,6 +185,7 @@ func (s *Service) Timer() {
 func (s *Service) Leaderboard(sec int64) {
 	for {
 		time.Sleep(time.Duration(sec) * time.Second)
+		s.RefreshLeaderboard()
 	}
 }
 
