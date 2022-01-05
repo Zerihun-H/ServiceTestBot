@@ -14,7 +14,7 @@ var MainMessage string = `[ㅤ](https://hexaddis.com/tut.gif)◍◍◌◌◌◎�
 // var TooManyMessage string = `Too many requests Please try again  latter`
 var TooManyMessage string = `በጣም ብዙ ጥያቄዎችን አድርገዋል እባክዎ በእርጋታ ይጠቀሙ`
 
-var VoiceRequestMessage string = `[ㅤ](https://hexaddis.com/voice01/%d.ogg) ከታች ያለውን ቃል ደግመው ይላኩልኝ
+var VoiceRequestMessage string = `[ㅤ](https://hexaddis.com/voice03/%d.ogg) ከታች ያለውን ቃል ደግመው ይላኩልኝ
 ㅤㅤㅤ◌◎◍ \#%s\ ◍◎◌
 
 ㅤ%s

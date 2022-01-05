@@ -77,11 +77,11 @@ var EndeKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 
 var AdminsKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("⊗ አሳልፍ ", "5"),
-		tgbotapi.NewInlineKeyboardButtonData("አግድ ⊖", "-5"),
+		tgbotapi.NewInlineKeyboardButtonData("⊕ አሳልፍ", "5"),
+		tgbotapi.NewInlineKeyboardButtonData("አሳቀር ⊝", "-5"),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("ላኪውን አግድ", "6"),
+		tgbotapi.NewInlineKeyboardButtonData("⊗ ላኪውን አግድ ⊗", "6"),
 	),
 )
 
