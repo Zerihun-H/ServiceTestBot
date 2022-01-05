@@ -31,9 +31,9 @@ func (s *Service) RandWord(userID int64, msgID int) (string, int) {
 	return WordList[randValue], randValue
 }
 
-func (s *Service) VoiceRequest(userID, chatID int64, msgID int, withPrevious *int, edited bool) {
+func (s *Service) VoiceRequest(userID, chatID int64, msgID int, withPrevious *int, edited, forMsg bool) {
 	if !edited {
-		s.VoiceRequestWithNewMessage(userID, msgID, withPrevious)
+		s.VoiceRequestWithNewMessage(userID, msgID, withPrevious, forMsg)
 		return
 	}
 	s.VoiceRequestWithEditMessage(userID, chatID, msgID, withPrevious)
@@ -85,7 +85,7 @@ func (s *Service) VoiceRequestWithEditMessage(userID, chatID int64, msgID int, w
 
 }
 
-func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevious *int) {
+func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevious *int, forMsg bool) {
 
 	var msg tgbotapi.MessageConfig
 	var rep tgbotapi.Message
@@ -132,31 +132,15 @@ func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevio
 		return
 	}
 
-	s.DeleteOldMsg(userID, msgID)
-	s.messageCleaner(userID, msgID)
+	s.DeleteOldMsg(userID)
+
+	if forMsg {
+		s.messageCleaner(userID, msgID)
+	}
+
 	//Update Last Message
 	msgID = rep.MessageID
 	s.UpdateUserOldMsg(userID, msgID)
-}
-
-func (s *Service) CloseVoiceRequest(update *tgbotapi.Update) {
-	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
-	var msgID = update.CallbackQuery.Message.MessageID
-
-	if _, found := s.Users[userID]; !found {
-		s.CreateUser(userID, 0, msgID)
-	}
-
-	msg := tgbotapi.NewMessage(chatID, ThanksMessage, "", true)
-	msg.ReplyMarkup = EndeKeyBord
-	rep, _ := s.bot.Send(msg)
-	go s.Users[userID].UpdateWaitWord(0)
-	s.DeleteOldMsg(userID, msgID)
-	s.messageCleaner(chatID, msgID)
-
-	msgID = rep.MessageID
-	s.UpdateUserOldMsg(userID, msgID)
-
 }
 
 func (u *User) InUserRecord(randIndex int) bool {

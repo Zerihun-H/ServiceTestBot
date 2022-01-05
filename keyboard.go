@@ -68,8 +68,8 @@ var pointAtMiddle = tgbotapi.NewInlineKeyboardRow(
 
 var EndeKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("↻ በአዲስ", "3"),
-		tgbotapi.NewInlineKeyboardButtonData("በቀድሞ ⟴", "-3"),
+		tgbotapi.NewInlineKeyboardButtonData("⟴ በቀድሞ", "-3"),
+		tgbotapi.NewInlineKeyboardButtonData("በአዲስ ↻", "3"),
 	), tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("𐙞 እኔ", "4"),
 	),

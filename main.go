@@ -29,7 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// bot.Debug = true
+	bot.Debug = true
 	// log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	UpdateConfi := tgbotapi.NewUpdate(0)
@@ -161,7 +161,7 @@ func (s *Service) Home(update *tgbotapi.Update) {
 	}
 
 	if u, found := s.Users[update.Message.From.ID]; found {
-		s.DeleteOldMsg(userID, msgID)
+		s.DeleteOldMsg(userID)
 		u.UpdateMsg(s.startMenu(userID))
 		s.messageCleaner(userID, msgID)
 		return
@@ -184,7 +184,7 @@ func (s *Service) Home(update *tgbotapi.Update) {
 
 }
 
-func (s *Service) DeleteOldMsg(userID int64, msgID int) {
+func (s *Service) DeleteOldMsg(userID int64) {
 	if _, found := s.Users[userID]; found {
 		s.messageCleaner(userID, s.Users[userID].LastmsgID)
 		return

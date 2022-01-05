@@ -43,6 +43,26 @@ func (s *Service) CallbackQueryHandler(update *tgbotapi.Update) {
 
 }
 
+func (s *Service) CloseVoiceRequest(update *tgbotapi.Update) {
+	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
+	var msgID = update.CallbackQuery.Message.MessageID
+
+	if _, found := s.Users[userID]; !found {
+		s.CreateUser(userID, 0, msgID)
+	}
+
+	msg := tgbotapi.NewMessage(chatID, ThanksMessage, "", true)
+	msg.ReplyMarkup = EndeKeyBord
+	rep, _ := s.bot.Send(msg)
+	go s.Users[userID].UpdateWaitWord(0)
+
+	s.DeleteOldMsg(userID)
+
+	msgID = rep.MessageID
+	s.UpdateUserOldMsg(userID, msgID)
+
+}
+
 func (s *Service) Requested(userID int64, msgID int) bool {
 	var user *User
 	var found bool
@@ -96,8 +116,9 @@ func (s *Service) RestartMenu(update *tgbotapi.Update) {
 	s.Users[userID].Restart()
 
 	msgIDs := s.startMenu(chatID)
-	s.DeleteOldMsg(userID, msgID)
-	s.messageCleaner(chatID, msgID)
+
+	s.DeleteOldMsg(userID)
+
 	s.UpdateUserOldMsg(userID, msgIDs)
 }
 
@@ -106,7 +127,7 @@ func (s *Service) GoNext(update *tgbotapi.Update) {
 	var msgID = update.CallbackQuery.Message.MessageID
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		s.VoiceRequest(userID, chatID, msgID, nil, false)
+		s.VoiceRequest(userID, chatID, msgID, nil, false, false)
 		return
 	}
 
@@ -118,7 +139,7 @@ func (s *Service) GoNext(update *tgbotapi.Update) {
 	}
 
 	s.UpdateWaitWord(userID, pointer)
-	s.VoiceRequest(userID, chatID, msgID, nil, true)
+	s.VoiceRequest(userID, chatID, msgID, nil, true, false)
 }
 
 func (s *Service) GoEnd(update *tgbotapi.Update) {
@@ -126,14 +147,14 @@ func (s *Service) GoEnd(update *tgbotapi.Update) {
 	var msgID = update.CallbackQuery.Message.MessageID
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		s.VoiceRequest(userID, chatID, msgID, nil, false)
+		s.VoiceRequest(userID, chatID, msgID, nil, false, false)
 		return
 	}
 
 	pointer := len(s.Users[userID].Record) - 1
 	s.UpdateWaitWord(userID, pointer)
 
-	s.VoiceRequest(userID, chatID, msgID, nil, false)
+	s.VoiceRequest(userID, chatID, msgID, nil, false, false)
 }
 
 func (s *Service) GoBack(update *tgbotapi.Update) {
@@ -141,7 +162,7 @@ func (s *Service) GoBack(update *tgbotapi.Update) {
 	var msgID = update.CallbackQuery.Message.MessageID
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		s.VoiceRequest(userID, chatID, msgID, nil, false)
+		s.VoiceRequest(userID, chatID, msgID, nil, false, false)
 		return
 	}
 
@@ -150,7 +171,7 @@ func (s *Service) GoBack(update *tgbotapi.Update) {
 		pointer = 0
 	}
 	s.UpdateWaitWord(userID, pointer)
-	s.VoiceRequest(userID, chatID, msgID, &pointer, true)
+	s.VoiceRequest(userID, chatID, msgID, &pointer, true, false)
 
 }
 
@@ -183,13 +204,13 @@ func (s *Service) VoiceRequestHandler(update *tgbotapi.Update) {
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
 	}
-	s.VoiceRequest(userID, chatID, msgID, nil, false)
+	s.VoiceRequest(userID, chatID, msgID, nil, false, true)
 }
 
 func (s *Service) VoiceMessageHandler(update *tgbotapi.Update) {
 	var userID, chatID, msgID = update.Message.From.ID, update.Message.Chat.ID, update.Message.MessageID
 	s.CopyVoiceToGroup(update.Message.From, update.Message.Voice.FileID, msgID)
-	s.VoiceRequest(userID, chatID, msgID, nil, false)
+	s.VoiceRequest(userID, chatID, msgID, nil, false, true)
 }
 
 func (s *Service) PhotoMessageHandler(update tgbotapi.Update) {}
@@ -206,6 +227,7 @@ func (s *Service) CopyVoiceToGroup(user *tgbotapi.User, fileID string, msgID int
 	var copyMsg tgbotapi.CopyMessageConfig
 	var groupMsg tgbotapi.Message
 	var err error
+
 	if _, found := s.Users[user.ID]; !found {
 		copyMsg = tgbotapi.NewCopyMessageToChannel("-1001717101880", "#Trash_Data", user.ID, msgID)
 		s.CreateUser(user.ID, 0, msgID)
@@ -242,6 +264,8 @@ func (s *Service) ConfirmDataSet(update *tgbotapi.Update) {
 
 	captions := strings.Fields(update.CallbackQuery.Message.Caption)
 	userID, _ := strconv.ParseInt(captions[2], 10, 64)
+	noHashesWord := strings.Replace(captions[0], "#", "", 1)
+	userName := captions[3]
 	if u, found := s.Users[userID]; found {
 		u.Confirmed++
 		for v := range u.Datasets {
@@ -250,12 +274,25 @@ func (s *Service) ConfirmDataSet(update *tgbotapi.Update) {
 			}
 		}
 	}
-	// noHashes := strings.Replace(update.CallbackQuery.Message.Caption, "#", "", 1)
+
+	switch {
+	case len(userName) > 2:
+		userName = strings.Replace(captions[3], "@", "", -1)
+	default:
+		userName = ""
+	}
+
+	entitys, texts := s.MessageEntityBuidler(&tgbotapi.User{
+		ID:        userID,
+		IsBot:     false,
+		FirstName: captions[1],
+		UserName:  userName,
+	}, noHashesWord)
+
 	// PrettyPrint(noHashes)
 
 	var chatID, msgID = update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID
-	oldMsg := update.CallbackQuery.Message.Caption
-	editedMsg := tgbotapi.NewEditMessageCaption(chatID, msgID, oldMsg+"\nConfirmed!")
+	editedMsg := tgbotapi.NewEditMessageCaption(chatID, msgID, texts+"\nConfirmed!", entitys...)
 	editedMsg.ReplyMarkup = &MoveBackKeyBord
 	s.bot.Send(editedMsg)
 }
@@ -267,19 +304,79 @@ func (s *Service) RejectDataset(update *tgbotapi.Update) {
 
 	var chatID, msgID = update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID
 
-	oldMsg := update.CallbackQuery.Message.Caption
+	captions := strings.Fields(update.CallbackQuery.Message.Caption)
+	userID, _ := strconv.ParseInt(captions[2], 10, 64)
+	noHashesWord := strings.Replace(captions[0], "#", "", 1)
+	userName := captions[3]
+	if u, found := s.Users[userID]; found {
+		u.Rejected++
+		for v := range u.Datasets {
+			if u.Datasets[v].MsgID == update.CallbackQuery.Message.MessageID {
+				u.Datasets[v].Confirmed = false
+			}
+		}
+	}
+	switch {
+	case len(userName) > 2:
+		userName = strings.Replace(captions[3], "@", "", -1)
+	default:
+		userName = ""
+	}
 
-	editedMsg := tgbotapi.NewEditMessageCaption(chatID, msgID, oldMsg+"\nRejected!")
+	entitys, texts := s.MessageEntityBuidler(&tgbotapi.User{
+		ID:        userID,
+		IsBot:     false,
+		FirstName: captions[1],
+		UserName:  userName,
+	}, noHashesWord)
+
+	editedMsg := tgbotapi.NewEditMessageCaption(chatID, msgID, texts+"\nRejected!", entitys...)
 	editedMsg.ReplyMarkup = &MoveBackKeyBord
 	s.bot.Send(editedMsg)
 }
 
 func (s *Service) MoveBack(update *tgbotapi.Update) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	var chatID, msgID = update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID
-	oldMsg := update.CallbackQuery.Message.Caption
-	replacer := strings.NewReplacer("Rejected!", "", "Confirmed!", "")
-	newCaption := replacer.Replace(oldMsg)
-	editedMsg := tgbotapi.NewEditMessageCaption(chatID, msgID, newCaption)
+	oldCaption := update.CallbackQuery.Message.Caption
+
+	captions := strings.Fields(update.CallbackQuery.Message.Caption)
+	userID, _ := strconv.ParseInt(captions[2], 10, 64)
+	noHashesWord := strings.Replace(captions[0], "#", "", 1)
+	userName := captions[3]
+
+	switch {
+	case strings.Contains(oldCaption, "Rejected!"):
+		if u, found := s.Users[userID]; found {
+			u.Rejected--
+		}
+	case strings.Contains(oldCaption, "Confirmed!"):
+		if u, found := s.Users[userID]; found {
+			u.Confirmed--
+		}
+	}
+
+	switch {
+	case len(userName) > 2:
+		userName = strings.Replace(captions[3], "@", "", -1)
+	default:
+		userName = ""
+	}
+
+	entitys, texts := s.MessageEntityBuidler(&tgbotapi.User{
+		ID:        userID,
+		IsBot:     false,
+		FirstName: captions[1],
+		UserName:  userName,
+	}, noHashesWord)
+
+	//Whe Manual Work :)
+
+	// replacer := strings.NewReplacer("Rejected!", "", "Confirmed!", "")
+	// newCaption := replacer.Replace(oldCaption)
+
+	editedMsg := tgbotapi.NewEditMessageCaption(chatID, msgID, texts, entitys...)
 	editedMsg.ReplyMarkup = &AdminsKeyBord
 	s.bot.Send(editedMsg)
 
@@ -303,7 +400,7 @@ func (s *Service) Profile(update *tgbotapi.Update) {
 	msg := tgbotapi.NewMessage(chatID, s.ProfileMsgBuilder(chatID, msgID), "", true)
 	msg.ReplyMarkup = s.ProfileKeyBodardBuidler(chatID)
 	rep, _ := s.bot.Send(msg)
-	s.DeleteOldMsg(chatID, msgID)
+	s.DeleteOldMsg(chatID)
 	s.messageCleaner(chatID, msgID)
 	//Update Last Message
 	msgID = rep.MessageID

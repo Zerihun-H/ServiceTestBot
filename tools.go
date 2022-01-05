@@ -22,7 +22,7 @@ func (s *Service) MakeNotice(msgText string, userID int64, msgID int) {
 	}
 
 	if msgID != 0 {
-		s.DeleteOldMsg(userID, msgID)
+		s.DeleteOldMsg(userID)
 	}
 
 	s.UpdateUserOldMsg(userID, rep.MessageID)
