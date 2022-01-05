@@ -14,7 +14,7 @@ import (
 
 type UpFunc func(*tgbotapi.Update)
 
-var token string = "5055129108:AAHq6BeMI4qCDWU9Xp0EW-4xJukqXMZ9FVA"
+var token string = "5005564686:AAGyPZX32onyXWCRGdkIq804LPmqBCgo3O0"
 
 type Pair struct {
 	Key   int64
@@ -102,7 +102,7 @@ func main() {
 
 	go service.Doctor(60)
 	go service.Dispatcher(15)
-	go service.Leaderboard(15)
+	go service.Leaderboard(60)
 
 	service.Start()
 	bot.LogOut()
@@ -187,11 +187,13 @@ func (u *User) UpdateMsg(msgID int) {
 func (s *Service) NotificationBuilder(usersID int) {}
 
 func (s *Service) UpdateUserOldMsg(userID int64, msgID int) {
+
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
 	}
 
 	s.Users[userID].UpdateMsg(msgID)
+
 }
 
 func (s *Service) UpdateUrSelf() {
