@@ -31,9 +31,9 @@ func (s *Service) RandWord(userID int64, msgID int) (string, int) {
 	return WordList[randValue], randValue
 }
 
-func (s *Service) VoiceRequest(userID, chatID int64, msgID int, withPrevious *int, edited, forMsg bool) {
+func (s *Service) VoiceRequest(userID, chatID int64, msgID int, withPrevious *int, edited bool) {
 	if !edited {
-		s.VoiceRequestWithNewMessage(userID, msgID, withPrevious, forMsg)
+		s.VoiceRequestWithNewMessage(userID, msgID, withPrevious)
 		return
 	}
 	s.VoiceRequestWithEditMessage(userID, chatID, msgID, withPrevious)
@@ -85,7 +85,7 @@ func (s *Service) VoiceRequestWithEditMessage(userID, chatID int64, msgID int, w
 
 }
 
-func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevious *int, forMsg bool) {
+func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevious *int) {
 
 	var msg tgbotapi.MessageConfig
 	var rep tgbotapi.Message
@@ -132,11 +132,7 @@ func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevio
 		return
 	}
 
-	s.DeleteOldMsg(userID)
-
-	if forMsg {
-		s.messageCleaner(userID, msgID)
-	}
+	s.messageCleaner(userID, msgID)
 
 	//Update Last Message
 	msgID = rep.MessageID

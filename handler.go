@@ -17,7 +17,7 @@ func (s *Service) CallbackQueryHandler(update *tgbotapi.Update) {
 	case "1":
 		go s.VoiceRequestHandler(update)
 	case "-1":
-		go s.AnswerCallbackQuery(s.GoEnd, update, "ሌላ")
+		go s.GoEnd(update)
 	case "0":
 		go s.CloseVoiceRequest(update)
 	case "-2":
@@ -27,7 +27,7 @@ func (s *Service) CallbackQueryHandler(update *tgbotapi.Update) {
 	case "3":
 		go s.RestartMenu(update)
 	case "-3":
-		go s.VoiceRequestHandler(update)
+		go s.GoEnd(update)
 	case "4":
 		go s.Profile(update)
 	case "5":
@@ -56,7 +56,7 @@ func (s *Service) CloseVoiceRequest(update *tgbotapi.Update) {
 	rep, _ := s.bot.Send(msg)
 	go s.Users[userID].UpdateWaitWord(0)
 
-	s.DeleteOldMsg(userID)
+	s.messageCleaner(userID, msgID)
 
 	msgID = rep.MessageID
 	s.UpdateUserOldMsg(userID, msgID)
@@ -107,17 +107,16 @@ func (s *Service) CommandHandler(update *tgbotapi.Update) {
 }
 
 func (s *Service) RestartMenu(update *tgbotapi.Update) {
-	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
-	var msgID = update.CallbackQuery.Message.MessageID
+	var userID, msgID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.MessageID
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
 	}
 	//Restart
 	s.Users[userID].Restart()
 
-	msgIDs := s.startMenu(chatID)
+	msgIDs := s.startMenu(userID)
 
-	s.DeleteOldMsg(userID)
+	s.messageCleaner(userID, msgID)
 
 	s.UpdateUserOldMsg(userID, msgIDs)
 }
@@ -127,7 +126,7 @@ func (s *Service) GoNext(update *tgbotapi.Update) {
 	var msgID = update.CallbackQuery.Message.MessageID
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		s.VoiceRequest(userID, chatID, msgID, nil, false, false)
+		s.VoiceRequest(userID, chatID, msgID, nil, false)
 		return
 	}
 
@@ -139,7 +138,7 @@ func (s *Service) GoNext(update *tgbotapi.Update) {
 	}
 
 	s.UpdateWaitWord(userID, pointer)
-	s.VoiceRequest(userID, chatID, msgID, nil, true, false)
+	s.VoiceRequest(userID, chatID, msgID, nil, true)
 }
 
 func (s *Service) GoEnd(update *tgbotapi.Update) {
@@ -147,14 +146,14 @@ func (s *Service) GoEnd(update *tgbotapi.Update) {
 	var msgID = update.CallbackQuery.Message.MessageID
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		s.VoiceRequest(userID, chatID, msgID, nil, false, false)
+		s.VoiceRequest(userID, chatID, msgID, nil, false)
 		return
 	}
 
 	pointer := len(s.Users[userID].Record) - 1
 	s.UpdateWaitWord(userID, pointer)
 
-	s.VoiceRequest(userID, chatID, msgID, nil, false, false)
+	s.VoiceRequest(userID, chatID, msgID, nil, false)
 }
 
 func (s *Service) GoBack(update *tgbotapi.Update) {
@@ -162,7 +161,7 @@ func (s *Service) GoBack(update *tgbotapi.Update) {
 	var msgID = update.CallbackQuery.Message.MessageID
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		s.VoiceRequest(userID, chatID, msgID, nil, false, false)
+		s.VoiceRequest(userID, chatID, msgID, nil, false)
 		return
 	}
 
@@ -171,7 +170,7 @@ func (s *Service) GoBack(update *tgbotapi.Update) {
 		pointer = 0
 	}
 	s.UpdateWaitWord(userID, pointer)
-	s.VoiceRequest(userID, chatID, msgID, &pointer, true, false)
+	s.VoiceRequest(userID, chatID, msgID, &pointer, true)
 
 }
 
@@ -204,13 +203,13 @@ func (s *Service) VoiceRequestHandler(update *tgbotapi.Update) {
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
 	}
-	s.VoiceRequest(userID, chatID, msgID, nil, false, true)
+	s.VoiceRequest(userID, chatID, msgID, nil, false)
 }
 
 func (s *Service) VoiceMessageHandler(update *tgbotapi.Update) {
 	var userID, chatID, msgID = update.Message.From.ID, update.Message.Chat.ID, update.Message.MessageID
 	s.CopyVoiceToGroup(update.Message.From, update.Message.Voice.FileID, msgID)
-	s.VoiceRequest(userID, chatID, msgID, nil, false, true)
+	s.VoiceRequest(userID, chatID, msgID, nil, false)
 }
 
 func (s *Service) PhotoMessageHandler(update tgbotapi.Update) {}
@@ -400,7 +399,6 @@ func (s *Service) Profile(update *tgbotapi.Update) {
 	msg := tgbotapi.NewMessage(chatID, s.ProfileMsgBuilder(chatID, msgID), "", true)
 	msg.ReplyMarkup = s.ProfileKeyBodardBuidler(chatID)
 	rep, _ := s.bot.Send(msg)
-	s.DeleteOldMsg(chatID)
 	s.messageCleaner(chatID, msgID)
 	//Update Last Message
 	msgID = rep.MessageID
