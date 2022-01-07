@@ -126,7 +126,7 @@ func (s *Service) GoNext(update *tgbotapi.Update) {
 	var msgID = update.CallbackQuery.Message.MessageID
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		s.VoiceRequest(userID, chatID, msgID, nil, false)
+		s.VoiceRequest(userID, chatID, msgID, nil, false, false)
 		return
 	}
 
@@ -138,7 +138,7 @@ func (s *Service) GoNext(update *tgbotapi.Update) {
 	}
 
 	s.UpdateWaitWord(userID, pointer)
-	s.VoiceRequest(userID, chatID, msgID, nil, true)
+	s.VoiceRequest(userID, chatID, msgID, nil, true, false)
 }
 
 func (s *Service) GoEnd(update *tgbotapi.Update) {
@@ -146,14 +146,14 @@ func (s *Service) GoEnd(update *tgbotapi.Update) {
 	var msgID = update.CallbackQuery.Message.MessageID
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		s.VoiceRequest(userID, chatID, msgID, nil, false)
+		s.VoiceRequest(userID, chatID, msgID, nil, false, false)
 		return
 	}
 
 	pointer := len(s.Users[userID].Record) - 1
 	s.UpdateWaitWord(userID, pointer)
 
-	s.VoiceRequest(userID, chatID, msgID, nil, false)
+	s.VoiceRequest(userID, chatID, msgID, nil, false, false)
 }
 
 func (s *Service) GoBack(update *tgbotapi.Update) {
@@ -161,7 +161,7 @@ func (s *Service) GoBack(update *tgbotapi.Update) {
 	var msgID = update.CallbackQuery.Message.MessageID
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		s.VoiceRequest(userID, chatID, msgID, nil, false)
+		s.VoiceRequest(userID, chatID, msgID, nil, false, false)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (s *Service) GoBack(update *tgbotapi.Update) {
 		pointer = 0
 	}
 	s.UpdateWaitWord(userID, pointer)
-	s.VoiceRequest(userID, chatID, msgID, &pointer, true)
+	s.VoiceRequest(userID, chatID, msgID, &pointer, true, false)
 
 }
 
@@ -203,13 +203,13 @@ func (s *Service) VoiceRequestHandler(update *tgbotapi.Update) {
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
 	}
-	s.VoiceRequest(userID, chatID, msgID, nil, false)
+	s.VoiceRequest(userID, chatID, msgID, nil, false, false)
 }
 
 func (s *Service) VoiceMessageHandler(update *tgbotapi.Update) {
 	var userID, chatID, msgID = update.Message.From.ID, update.Message.Chat.ID, update.Message.MessageID
 	s.CopyVoiceToGroup(update.Message.From, update.Message.Voice.FileID, msgID)
-	s.VoiceRequest(userID, chatID, msgID, nil, false)
+	s.VoiceRequest(userID, chatID, msgID, nil, false, true)
 }
 
 func (s *Service) PhotoMessageHandler(update tgbotapi.Update) {}
