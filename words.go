@@ -81,8 +81,16 @@ func (s *Service) VoiceRequestWithEditMessage(userID, chatID int64, msgID int, w
 
 	if _, err := s.bot.Send(msg); err != nil {
 		s.ReportToAdmin(err.Error())
+		return
 	}
 
+	s.UpdateUserMenuState(userID, WaitingVoice)
+}
+
+func (s *Service) UpdateUserMenuState(userID int64, menu MenuState) {
+	s.mu.Lock()
+	s.Users[userID].MenuState = menu
+	s.mu.Unlock()
 }
 
 func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevious *int, delOldmsg bool) {
@@ -139,6 +147,8 @@ func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevio
 	//Update Last Message
 	msgID = rep.MessageID
 	s.UpdateUserOldMsg(userID, msgID)
+	s.UpdateUserMenuState(userID, WaitingVoice)
+
 }
 
 func (u *User) InUserRecord(randIndex int) bool {

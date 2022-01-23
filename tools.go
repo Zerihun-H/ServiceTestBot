@@ -51,13 +51,14 @@ func (s *Service) LoadBackup(filename string) {
 	}
 	defer file.Close()
 	decoder := gob.NewDecoder(file)
+
 	if err = decoder.Decode(s.Cache); err != nil {
 		s.ReportToAdmin(err.Error())
 	}
 }
 
 func (s *Service) ReportToAdmin(msgText string) {
-	if _, err := s.SendMessage(s.SuperAdmin, msgText, "", false); err != nil {
+	if _, err := s.SendMessage(s.Admin, msgText, "", false); err != nil {
 		fmt.Printf("errors %s", err.Error())
 	}
 
@@ -109,7 +110,7 @@ func (s *Service) AskCache() {
 	s.ReportToAdmin("please send to me a last updated Cache")
 	for update := range s.updates {
 		if update.Message != nil {
-			if s.SuperAdmin == update.Message.From.ID {
+			if s.Admin == update.Message.From.ID {
 				if update.Message.Text == "!" || update.Message.Command() == "start" {
 					s.messageCleaner(update.Message.Chat.ID, update.Message.MessageID)
 					return
@@ -128,7 +129,7 @@ func (s *Service) AskCache() {
 			s.ReportToAdmin("successfully Updated Cache")
 			return
 		}
-		s.ReportToAdmin(err.Error())
+		s.ReportToAdmin("Couldn't Download File" + FileID + err.Error())
 	}
 }
 
@@ -194,18 +195,24 @@ func (s *Service) RefreshLeaderboard() {
 	defer s.mu.Unlock()
 
 	totalWord := float32(len(s.WordList))
+
 	for _, u := range s.Users {
-		recordGarde := float32(len(u.Datasets)) / totalWord
-		confirmedGarde := float32(u.Confirmed) / totalWord
-		invitionGarde := float32(len(u.Invited)) / float32(s.HighestInvention)
-		u.Avarage = (recordGarde + confirmedGarde + invitionGarde) * 100 / 3
+
+		recordGrade := float32(len(u.Datasets)) / totalWord
+		confirmedGrade := float32(u.Confirmed) / totalWord
+		invitionGrade := float32(len(u.Invited)) / s.HighestInvitation
+		invitionTreeGrade := u.TreeInvitation / s.HighestTreeInvitation
+		treeConfirmedGrade := u.TreeConfirmed / s.HighestTreeConfirmed
+		treeRecordGrade := u.TreeRecord / s.HighestTreeRecord
+
+		u.Avarage = (recordGrade + confirmedGrade + invitionGrade + invitionTreeGrade + treeConfirmedGrade + treeRecordGrade) * 100 / 6
 	}
 
 	rank := make(RankList, len(s.Users))
 	i := 0
 
 	for k, u := range s.Users {
-		rank[i] = Pair{k, u.Avarage}
+		rank[i] = &Pair{k, u.Avarage}
 		i++
 	}
 
@@ -214,6 +221,53 @@ func (s *Service) RefreshLeaderboard() {
 
 	for newRank, ranks := range s.RankList {
 		s.Users[ranks.Key].Rank = newRank + 1
+	}
+}
+
+func (s *Service) UpdateTreeConfirmed(invite int64) {
+	s.mu.Lock()
+	for user, found := s.Users[invite]; found; {
+		if s.HighestTreeConfirmed < user.TreeRecord {
+			s.HighestTreeConfirmed = user.TreeConfirmed
+		}
+		user.TreeConfirmed++
+		user, found = s.Users[user.InvitedBy]
+	}
+	s.mu.Unlock()
+}
+
+func (s *Service) UpdateTreeRecord(invite int64) {
+	s.mu.Lock()
+	for user, found := s.Users[invite]; found; {
+		if s.HighestTreeRecord < user.TreeRecord {
+			s.HighestTreeRecord = user.TreeRecord
+		}
+		user.TreeRecord++
+		user, found = s.Users[user.InvitedBy]
+	}
+	s.mu.Unlock()
+}
+
+func (s *Service) UpdateTreeInvitation(invite int64) {
+	s.mu.Lock()
+	for user, found := s.Users[invite]; found; {
+		if s.HighestTreeInvitation < user.TreeInvitation {
+			s.HighestTreeInvitation = user.TreeInvitation
+		}
+		user.TreeInvitation++
+		user, found = s.Users[user.InvitedBy]
+	}
+	s.mu.Unlock()
+}
+
+func (s *Service) UpdateTreeSchema() {
+	for i := range s.Users {
+		for j := 1; j <= s.Users[i].Confirmed; j++ {
+			s.UpdateTreeConfirmed(i)
+		}
+		for range s.Users[i].Invited {
+			s.UpdateTreeInvitation(i)
+		}
 	}
 }
 

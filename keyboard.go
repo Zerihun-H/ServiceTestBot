@@ -75,42 +75,52 @@ var EndeKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	),
 )
 
-var AdminsKeyBord = tgbotapi.NewInlineKeyboardMarkup(
+var UserVoiceMenu = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("⊕ አሳልፍ", "5"),
-		tgbotapi.NewInlineKeyboardButtonData("አሳቀር ⊝", "-5"),
+		tgbotapi.NewInlineKeyboardButtonData("√ ላክ", "14"),
+		tgbotapi.NewInlineKeyboardButtonData("አስቀር X", "-14"),
+	),
+)
+
+var AdminKeyBoard = tgbotapi.NewInlineKeyboardMarkup(
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("√ አሳልፍ", "5"),
+		tgbotapi.NewInlineKeyboardButtonData("አስቀር X", "-5"),
 	),
 	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("⊗ ላኪውን አግድ ⊗", "6"),
 	),
 )
+var BlockBtn = tgbotapi.NewInlineKeyboardMarkup(
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("⊗ ላኪውን አግድ ⊗", "00"),
+	))
 
-//
 var MoveBackKeyBord = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("⇜ መልስ", "7"),
 	))
 
-var AdminKeyBoard = tgbotapi.NewInlineKeyboardMarkup(
+var AdminMenuKeyBoard = tgbotapi.NewInlineKeyboardMarkup(
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("Self Update", "8"),
-		tgbotapi.NewInlineKeyboardButtonData("Get Cache ", "9"),
+		tgbotapi.NewInlineKeyboardButtonData("Self Update", "-"),
+		tgbotapi.NewInlineKeyboardButtonData("Get Cache ", "-"),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("Update Voice Path", "10"),
+		tgbotapi.NewInlineKeyboardButtonData("Update Voice Path", "-"),
 	),
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("Update Words", "10"),
-		tgbotapi.NewInlineKeyboardButtonData("Update Caches", "11"),
+		tgbotapi.NewInlineKeyboardButtonData("Update Words", "-"),
+		tgbotapi.NewInlineKeyboardButtonData("Update Caches", "-"),
 	),
 
 	tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("Block", "10"),
-		tgbotapi.NewInlineKeyboardButtonData("leaderboard", "11"),
+		tgbotapi.NewInlineKeyboardButtonData("leaderboard", "-"),
 	),
 
 	tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("Analytics ", "12"),
+		tgbotapi.NewInlineKeyboardButtonData("Analytics ", "-"),
 	),
 )
 
@@ -133,18 +143,26 @@ func (s *Service) UserMenu(userID int64) tgbotapi.InlineKeyboardMarkup {
 
 func (s *Service) PageViewBuilder(userID int64) string {
 	lenRecord := len(s.Users[userID].Record)
+	lenDataset := len(s.WordList)
 	recordPointer := s.Users[userID].RecordPointer
-	var data, icon, data2, icon2 string
+	var data, icon, data2, icon2, msg string
 	var backLimit, forwardLimit int
+
+	if recordPointer%5 == 0 && recordPointer != 0 {
+		if s.Users[userID].VerifiedSetting {
+			msg = SettingsDisabledNotice
+		} else {
+			msg = SettingsEnabledNotice
+		}
+	}
 
 	switch {
 	case recordPointer == 0 && lenRecord > 1:
 		data, icon = NewBuilder(recordPointer, lenRecord, true).String()
-		return fmt.Sprintf("%s1%s%s%s", opener, closer, data, icon)
+		return fmt.Sprintf("%s1%s%s%s%d%s", opener, closer, data, icon, lenDataset, msg)
 	case recordPointer > 0 && recordPointer == lenRecord-1:
 		data, icon = NewBuilder(recordPointer, lenRecord, false).String()
-
-		return fmt.Sprintf("%s%s%s%d%s", icon, data, opener, recordPointer+1, closer)
+		return fmt.Sprintf("%s%s%s%d%s%d%s", icon, data, opener, recordPointer+1, closer, lenDataset, msg)
 	case recordPointer > 0 && recordPointer < lenRecord-1:
 		backLimit = lenRecord - 1 - recordPointer
 		backLimit = 6 - backLimit
@@ -158,7 +176,7 @@ func (s *Service) PageViewBuilder(userID int64) string {
 		}
 		// limit =
 		data2, icon2 = NewBuilder(recordPointer, lenRecord, true).String(forwardLimit)
-		return fmt.Sprintf("%s%s%s%d%s%s%s", icon, data, opener, recordPointer+1, closer, data2, icon2)
+		return fmt.Sprintf("%s%s%s%d%s%s%s%d%s", icon, data, opener, recordPointer+1, closer, data2, icon2, lenDataset, msg)
 	}
 
 	return ""

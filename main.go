@@ -15,10 +15,16 @@ func (s *Service) CreateUser(userID, inviterID int64, msgID int) {
 
 	s.mu.Lock()
 	s.Users[userID] = &User{
-		InvitedBy: inviterID,
+		InvitedBy:       inviterID,
+		MenuState:       UserHomePage,
+		VerifiedSetting: true,
 	}
 	s.Users[userID].LastmsgID = msgID
 	s.mu.Unlock()
+
+	if inviterID != 0 {
+		go s.UpdateTreeInvitation(userID)
+	}
 }
 
 func main() {
@@ -29,7 +35,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	bot.Debug = true
+	// bot.Debug = true
 	// log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	UpdateConfi := tgbotapi.NewUpdate(0)
@@ -41,6 +47,10 @@ func main() {
 	go service.Doctor(60)
 	go service.Dispatcher(15)
 	go service.Leaderboard(60)
+
+	// service.MAkeAllWaiting()
+	// service.RemoveAllBlock()
+	// service.UpdateTreeSchema()
 
 	service.Start()
 	bot.LogOut()
@@ -65,6 +75,18 @@ func (s *Service) Start() {
 		}
 	}
 }
+
+func (s *Service) MAkeAllWaiting() {
+	for i := range s.Users {
+		s.Users[i].VerifiedSetting = true
+		s.Users[i].MenuState = WaitingVoice
+	}
+}
+
+func (s *Service) RemoveAllBlock() {
+	s.Blocked = make(map[int64]int)
+}
+
 func (s *Service) HandleUpdate(nextFunc UpFunc, update *tgbotapi.Update, userID int64, msgID int) {
 	var requested = !s.Requested(userID, msgID)
 	switch {
@@ -83,16 +105,14 @@ func (s *Service) New(bot *tgbotapi.BotAPI, updates tgbotapi.UpdatesChannel) *Se
 	s.bot = bot
 	s.updates = updates
 	s.Cache = &Cache{
-		Users:            make(map[int64]*User),
-		WordList:         WordList,
-		SuperAdmin:       1034094796,
-		Admin:            []int64{1034094796},
-		VoiceVersion:     "",
-		Blocked:          make(map[int64]int),
-		RankList:         []Pair{},
-		HighestInvention: 0,
-		Request:          make(map[int64]int),
-		Contribution:     make(map[int64]int),
+		Users:                 make(map[int64]*User),
+		WordList:              WordList,
+		Admin:                 Admin,
+		VoiceVersion:          "",
+		Blocked:               make(map[int64]int),
+		RankList:              []*Pair{},
+		Request:               make(map[int64]int),
+		ColleagueContribution: make(map[int64]int),
 	}
 
 	switch {
@@ -106,12 +126,7 @@ func (s *Service) New(bot *tgbotapi.BotAPI, updates tgbotapi.UpdatesChannel) *Se
 }
 
 func (s *Service) IsAdmin(userID int64) bool {
-	for _, u := range s.Admin {
-		if u == userID {
-			return true
-		}
-	}
-	return false
+	return s.Admin == userID
 }
 
 func (u *User) GetCallBack() int {
@@ -200,7 +215,7 @@ func (s *Service) startMenu(usrID int64) int {
 
 func (s *Service) startDashboard(usrID int64) int {
 	msg := tgbotapi.NewMessage(usrID, "Welcome  Admin", "", true)
-	msg.ReplyMarkup = AdminKeyBoard
+	msg.ReplyMarkup = AdminMenuKeyBoard
 	rep, err := s.bot.Send(msg)
 	if err != nil {
 		s.ReportToAdmin(err.Error())
@@ -290,8 +305,9 @@ func (s *Service) AddInvitation(inviter, userID int64) {
 		s.CreateUser(inviter, 0, 0)
 	}
 	s.Users[inviter].Invited = append(s.Users[inviter].Invited, userID)
-	if len(s.Users[inviter].Invited) > s.HighestInvention {
-		s.HighestInvention = len(s.Users[inviter].Invited)
+	lenInvited := float32(len(s.Users[inviter].Invited))
+	if lenInvited > s.HighestInvitation {
+		s.HighestInvitation = lenInvited
 	}
 }
 
@@ -302,4 +318,35 @@ func (s *Service) CountInvitation(inviter int64) int {
 	}
 
 	return len(s.Users[inviter].Invited)
+}
+
+func (s *Service) ConfirmUserDataSet(userID int64, msgID int) {
+	if user, found := s.Users[userID]; found {
+		for v := range user.Datasets {
+			if user.Datasets[v].MsgID == msgID {
+				if !user.Datasets[v].Confirmed {
+					s.mu.Lock()
+					user.Datasets[v].Confirmed = true
+					user.Confirmed++
+					s.mu.Unlock()
+					s.UpdateTreeConfirmed(user.InvitedBy)
+				}
+			}
+		}
+	}
+}
+
+func (s *Service) RejectUserDataset(userID int64, msgID int) {
+	if u, found := s.Users[userID]; found {
+		for v := range u.Datasets {
+			if u.Datasets[v].MsgID == msgID {
+				if u.Datasets[v].Confirmed {
+					s.mu.Lock()
+					u.Confirmed--
+					u.Datasets[v].Confirmed = false
+					s.mu.Unlock()
+				}
+			}
+		}
+	}
 }

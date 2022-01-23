@@ -2,52 +2,73 @@ package main
 
 import "fmt"
 
+var SettingsDisabledNotice = `
+
+ከእዚህ ቀጥሎ ሳያረጋግጡ መላክ ከፈልጉ 
+ይህን ይጫኑ 👉🏽 /disabled 
+`
+var SettingsEnabledNotice = `
+
+እያረጋገጡ መላክ ከፈልጉ 
+ይህን ይጫኑ 👉🏽 /enabled
+`
+
 var MainMessage string = `[ㅤ](https://hexaddis.com/tut.gif)◍◍◌◌◌◎◈  መግለጫ  ◈◎◌◌◌◍◍  
 
 ◈ ብዙም እርብሻ የሌለበት ቦታ ቢሆን ይመረጣል \!\
 ◈ ከሚሰጥዎት የድምፅ አብነት ጋር ለማመሳሰል ይሞክሩ \!\
 ◈ ከ 1 ሰኮንድ ያልብለጥ ቢሆን ተመራጭ ነው \!\
 
-
 ◦ ለመጀመር ከስር ያለውን አዝራር ይጫኑ ◦`
 
-// var TooManyMessage string = `Too many requests Please try again  latter`
-var TooManyMessage string = `በጣም ብዙ ጥያቄዎችን አድርገዋል እባክዎ በእርጋታ ይጠቀሙ`
+const (
+	AlertMsg               = "ይህን እርሶ ማድረግ አይችሉም !"
+	AlertMessage           = "የራስዎን ጓደኛ ማሳለፍ አይችሉም !"
+	AlertMessages          = "በአንተ ስር የተጋበዙ ሰዎች !"
+	AlertMessageWithManual = "[ㅤ](https://hexaddis.com/manual.jpg)እባክዎ ድምፅ ብቻ ይላኩልኝ"
+	TooManyMessage         = "በጣም ብዙ ጥያቄዎችን አድርገዋል እባክዎ በእርጋታ ይጠቀሙ"
+	MicNotice              = "ደምፅ ለመቅዳት የ ማይክራፎን መልክቱን ይጫኑ"
 
-var VoiceRequestMessage string = `[ㅤ](https://hexaddis.com/voice03/%d.ogg) ከታች ያለውን ቃል ደግመው ይላኩልኝ
-ㅤㅤㅤ◌◎◍ \#%s\ ◍◎◌
-
-ㅤ%s
-ㅤ
-`
-
-var ThanksMessage string = `┌˚❀̥──◌─ ላምባ ──◌─❀̥˚┐
-ㅤㅤ	ለትብብሮዎ እናመሰግናለን 
-ㅤㅤㅤㅤ	ለመቀጠል ↴
-`
-
-var profile string = `❁✼✼✭✤✥✤✬❉❈❋✷❊✵❉
-❋
-✼     ጠቅላላ የድምፅ ቅጂ 
-✾ㅤㅤㅤㅤㅤ↳%d
-✥  ቀሪ  ያልተቀዳ ድምፅ ብዛት 
-❊ㅤㅤㅤㅤㅤ↳%d
-❈ㅤㅤየተጣራ የድምፅ ብዛት
-❋ㅤㅤㅤㅤㅤ↳%d
-✼ㅤㅤᴥ የተጋባዥ ብዛት ᴥ 
-❉ㅤㅤㅤㅤㅤ↳%d
-❊ㅤㅤㅤㅤ𐃫 ደረጃ 𐃫
-✵ㅤㅤㅤㅤㅤ↳%d
-❉`
-
-var AlertMessage string = `[ㅤ](https://hexaddis.com/manual.jpg)እባክዎ ድምፅ ብቻ ይላኩልኝ 
-
-ደምፅ ለመቅዳት የ ማይክራፎን መልክቱን ይጫኑ`
-
-var BlockNotice string = `ለግዜው ስለታገዱ የ ቦቱን አስተዳደር ያናግሩ \!\
+	BlockNotice = `ለግዜው ስለታገዱ የ ቦቱን አስተዳደር ያናግሩ \!\
 
 ➥ [[ዋና አስተዳደር]((tg://user?id=395490182)](https://t.me/Tom201513)
-➥ [[ምክትል አስተዳደር](tg://user?id=5084305533)](https://t.me/LambaSupport)`
+➥ [[ምክትል አስተዳደር](tg://user?id=5084305533)](https://t.me/LambaSupport)
+	`
+
+	ThanksMessage = `┌˚❀̥──◌─ ላምባ ──◌─❀̥˚┐
+	ㅤㅤ	ለትብብሮዎ እናመሰግናለን 
+	ㅤㅤㅤㅤ	ለመቀጠል ↴`
+
+	VoiceRequestMessage = `[ㅤ](https://hexaddis.com/voice03/%d.ogg) ከታች ያለውን ቃል ደግመው ይላኩልኝ
+	ㅤㅤㅤ◌◎◍ \#%s\ ◍◎◌
+	
+	ㅤ%s
+	ㅤ`
+
+	profile = `❁✼✼✭✤✥✤✬❉❈❋✷❊✵❉
+	❋
+	✼     ጠቅላላ የድምፅ ቅጂ 
+	✾ㅤㅤㅤㅤㅤ↳%d
+	✥  ቀሪ  ያልተቀዳ ድምፅ ብዛት 
+	❊ㅤㅤㅤㅤㅤ↳%d
+	❈ㅤㅤየተጣራ የድምፅ ብዛት
+	❋ㅤㅤㅤㅤㅤ↳%d
+	✼ㅤㅤᴥ የተጋባዥ ብዛት ᴥ 
+	❉ㅤㅤㅤㅤㅤ↳%d
+	❉ በአንተ ስር የተጋበዙ ሰዎች
+	❉ㅤㅤㅤㅤㅤ↳%.0f
+	❉ በእርሶ ስር የተቀዱ ቃላቶች
+	❉ㅤㅤㅤㅤㅤ↳%.0f
+	❉በእርሶ ስር ማረጋገጫ ያገኙ ቃላቶች 
+	❉ㅤㅤㅤㅤㅤ↳%.0f
+	----------------------------------
+	❊ㅤㅤㅤㅤአማካይ ውጤት
+	❊ㅤㅤㅤㅤㅤ↳%.2f
+	❊ㅤㅤㅤㅤ𐃫 ደረጃ 𐃫
+	✵ㅤㅤㅤㅤㅤ↳%d
+	----------------------------------
+	`
+)
 
 var BlockedNotice string = `User %s Blocked By`
 
@@ -72,11 +93,12 @@ func (s *Service) ProfileMsgBuilder(userID int64, msgID int) string {
 
 	if user, found = s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
-		return fmt.Sprintf(profile, 0, 0, 0, 0)
+		return fmt.Sprintf(profile, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0)
 	}
 
 	totalVoice := len(user.Datasets)
 	remainVoice := len(s.WordList) - totalVoice
+	userInvited := len(user.Invited)
 
-	return fmt.Sprintf(profile, totalVoice, remainVoice, user.Confirmed, len(user.Invited), user.Rank)
+	return fmt.Sprintf(profile, totalVoice, remainVoice, user.Confirmed, userInvited, user.TreeInvitation, user.TreeRecord, user.TreeConfirmed, user.Avarage, user.Rank)
 }

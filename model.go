@@ -15,7 +15,31 @@ type Pair struct {
 	Value float32
 }
 
-type RankList []Pair
+type AdminMenuState uint8
+type MenuState uint8
+
+const (
+	Admin           = 1034094796
+	DatasetGroup    = "-1001717101880"
+	DatasetGroupInt = -1001717101880
+	BackupGroup     = "-1001615301597"
+)
+
+const (
+	HomePage AdminMenuState = iota
+	BlockPage
+	UnBlockPage
+	ChangeAdmin
+)
+
+const (
+	UserHomePage MenuState = iota
+	UserMenuPage
+	WaitingVoice
+	WaitingVerification
+)
+
+type RankList []*Pair
 
 func (p RankList) Len() int           { return len(p) }
 func (p RankList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
@@ -27,7 +51,7 @@ type Service struct {
 	updates tgbotapi.UpdatesChannel
 	mu      sync.RWMutex
 }
-type Cache struct {
+type Cache2 struct {
 	Users        map[int64]*User
 	WordList     []string
 	SuperAdmin   int64
@@ -40,19 +64,38 @@ type Cache struct {
 	Contribution     map[int64]int
 }
 
+type Cache struct {
+	Users        map[int64]*User
+	WordList     []string
+	Admin        int64
+	VoiceVersion string
+	Blocked      map[int64]int
+	RankList
+	HighestInvitation     float32
+	HighestTreeRecord     float32
+	HighestTreeConfirmed  float32
+	HighestTreeInvitation float32
+	Request               map[int64]int
+	AdminMenuState
+	ColleagueContribution map[int64]int
+}
 type User struct {
-	LastmsgID     int
-	InvitedBy     int64
-	Invited       []int64
-	Record        []int
-	Rejected      int
-	Confirmed     int
-	Datasets      []*VoiceMessage
-	RecordPointer int
-	PhoneNum      string
-	Rank          int
-	Avarage       float32
-	RequestTime   int64
+	LastmsgID       int
+	InvitedBy       int64
+	Invited         []int64
+	Record          []int
+	Confirmed       int
+	Datasets        []*VoiceMessage
+	TreeConfirmed   float32
+	TreeRecord      float32
+	TreeInvitation  float32
+	RecordPointer   int
+	PhoneNum        string
+	Rank            int
+	Avarage         float32
+	RequestTime     int64
+	VerifiedSetting bool
+	MenuState
 }
 
 func (u *User) Restart() {
