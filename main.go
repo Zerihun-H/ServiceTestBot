@@ -35,7 +35,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// bot.Debug = true
+	bot.Debug = true
 	// log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	UpdateConfi := tgbotapi.NewUpdate(0)
@@ -49,7 +49,7 @@ func main() {
 	go service.Leaderboard(60)
 
 	// service.MAkeAllWaiting()
-	// service.RemoveAllBlock()
+	service.RemoveAllBlock()
 	// service.UpdateTreeSchema()
 
 	service.Start()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
@@ -15,12 +16,14 @@ func (s *Service) RandWord(userID int64, msgID int) (string, int) {
 	}
 
 	var randValue int = 5
+	var WordCheck int = 0
 	newSource := rand.NewSource(time.Now().UnixNano())
 	newRand := rand.New(newSource)
 
 	for {
+		WordCheck++
 		randValue = newRand.Intn(len(WordList) - 1)
-		if !s.Users[userID].InUserRecord(randValue) {
+		if !s.Users[userID].InUserRecord(randValue) || WordCheck == len(s.WordList) {
 			break
 		}
 	}
@@ -33,7 +36,9 @@ func (s *Service) RandWord(userID int64, msgID int) (string, int) {
 
 func (s *Service) VoiceRequest(userID, chatID int64, msgID int, withPrevious *int, edited, delOldmsg bool) {
 	if !edited {
+
 		s.VoiceRequestWithNewMessage(userID, msgID, withPrevious, delOldmsg)
+
 		return
 	}
 	s.VoiceRequestWithEditMessage(userID, chatID, msgID, withPrevious)
@@ -104,6 +109,7 @@ func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevio
 
 	switch {
 	case lenRecord > 0 && recordPointer < lenRecord-1 && withPrevious == nil:
+
 		if lenRecord == 0 {
 			word, randValue := s.RandWord(userID, msgID)
 			word = fmt.Sprintf(VoiceRequestMessage, randValue, word, s.PageViewBuilder(userID))
@@ -117,10 +123,13 @@ func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevio
 			s.UpdateWaitWord(userID, nextWord)
 		}
 	case withPrevious == nil:
+
 		word, randValue := s.RandWord(userID, msgID)
 		word = fmt.Sprintf(VoiceRequestMessage, randValue, word, s.PageViewBuilder(userID))
 		msg = tgbotapi.NewMessage(userID, word, "MarkdownV2", false)
+
 	case withPrevious != nil:
+
 		if lenRecord == 0 {
 			word, randValue := s.RandWord(userID, msgID)
 			word = fmt.Sprintf(VoiceRequestMessage, randValue, word, s.PageViewBuilder(userID))
@@ -133,10 +142,13 @@ func (s *Service) VoiceRequestWithNewMessage(userID int64, msgID int, withPrevio
 		}
 	}
 
+	log.Println(".......... Hree ........")
+
 	msg.ReplyMarkup = s.UserMenu(userID)
 
 	if rep, err = s.bot.Send(msg); err != nil {
 		s.ReportToAdmin(err.Error())
+
 		return
 	}
 

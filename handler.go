@@ -228,6 +228,7 @@ func (s *Service) MessageHandler(update *tgbotapi.Update) {
 func (s *Service) VoiceRequestHandler(update *tgbotapi.Update) {
 	var userID, chatID = update.CallbackQuery.From.ID, update.CallbackQuery.Message.Chat.ID
 	var msgID = update.CallbackQuery.Message.MessageID
+
 	if _, found := s.Users[userID]; !found {
 		s.CreateUser(userID, 0, msgID)
 	}
@@ -264,6 +265,8 @@ func (s *Service) CopyVoiceToGroup(user *tgbotapi.User, fileID string, msgID int
 	switch {
 	case !found:
 		copyMsg = tgbotapi.NewCopyMessageToChannel(DatasetGroup, "#Trash_Data", user.ID, msgID)
+		copyMsg.ReplyMarkup = BlockBtn
+		s.bot.Send(copyMsg)
 		s.CreateUser(user.ID, 0, msgID)
 		return false
 	case u.MenuState != WaitingVoice:

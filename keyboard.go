@@ -142,13 +142,14 @@ func (s *Service) UserMenu(userID int64) tgbotapi.InlineKeyboardMarkup {
 }
 
 func (s *Service) PageViewBuilder(userID int64) string {
-	lenRecord := len(s.Users[userID].Record)
-	lenDataset := len(s.WordList)
-	recordPointer := s.Users[userID].RecordPointer
 	var data, icon, data2, icon2, msg string
 	var backLimit, forwardLimit int
 
-	if recordPointer%5 == 0 && recordPointer != 0 {
+	lenRecord := len(s.Users[userID].Record)
+	lenDataset := len(s.WordList)
+	recordPointer := s.Users[userID].RecordPointer
+
+	if recordPointer%5 == 0 && recordPointer != 0 && recordPointer <= 15 {
 		if s.Users[userID].VerifiedSetting {
 			msg = SettingsDisabledNotice
 		} else {

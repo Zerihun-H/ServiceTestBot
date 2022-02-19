@@ -197,10 +197,38 @@ func (s *Service) RefreshLeaderboard() {
 	totalWord := float32(len(s.WordList))
 
 	for _, u := range s.Users {
+		temRecord := float32(len(u.Datasets))
+		lenInvited := float32(len(u.Invited))
+		confirmedVoice := float32(u.Confirmed)
 
-		recordGrade := float32(len(u.Datasets)) / totalWord
-		confirmedGrade := float32(u.Confirmed) / totalWord
-		invitionGrade := float32(len(u.Invited)) / s.HighestInvitation
+		if temRecord > totalWord {
+			OverFlowVoice := temRecord - totalWord
+			u.TreeRecord = u.TreeRecord + OverFlowVoice
+			if u.TreeRecord > s.HighestTreeRecord {
+				s.HighestTreeRecord = u.TreeRecord
+			}
+			InvitaionBounsValue := OverFlowVoice / totalWord
+			lenInvited = lenInvited + InvitaionBounsValue
+			u.TreeInvitation = u.TreeInvitation + InvitaionBounsValue
+			if u.TreeInvitation > s.HighestTreeInvitation {
+				s.HighestInvitation = u.TreeInvitation
+			}
+			temRecord = totalWord
+
+		}
+
+		if confirmedVoice > totalWord {
+			OverFlowConfirmation := confirmedVoice - totalWord
+			u.Confirmed = int(totalWord)
+			u.TreeConfirmed = u.TreeConfirmed + OverFlowConfirmation
+			if u.TreeConfirmed > s.HighestTreeConfirmed {
+				s.HighestTreeConfirmed = u.TreeConfirmed
+			}
+		}
+
+		recordGrade := temRecord / totalWord
+		confirmedGrade := confirmedVoice / totalWord
+		invitionGrade := lenInvited / s.HighestInvitation
 		invitionTreeGrade := u.TreeInvitation / s.HighestTreeInvitation
 		treeConfirmedGrade := u.TreeConfirmed / s.HighestTreeConfirmed
 		treeRecordGrade := u.TreeRecord / s.HighestTreeRecord
